@@ -313,7 +313,7 @@ class AdvancedBitmapEditor:
         self.plot_histogram(hist_data)
 
     def plot_histogram(self, histogram):
-        # Creăm graficul într-o fereastră separată (Matplotlib face asta automat cu .show())
+        # Creăm graficul într-o fereastră separată
         plt.figure("Analiză Histogramă", figsize=(8, 5))
         plt.bar(range(256), histogram, color='#555555', width=1.0)
         plt.title("Distribuția tonurilor de gri")
