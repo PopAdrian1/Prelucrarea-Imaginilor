@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
+import matplotlib.pyplot as plt
 
 class AdvancedBitmapEditor:
     def __init__(self, root):
@@ -22,7 +23,10 @@ class AdvancedBitmapEditor:
             "y_luma": tk.DoubleVar(value=1.0), "u": tk.DoubleVar(value=1.0), "v": tk.DoubleVar(value=1.0),
             "cb": tk.DoubleVar(value=1.0), "cr": tk.DoubleVar(value=1.0),
             "gray_gain": tk.DoubleVar(value=1.0),
-            "thresh": tk.DoubleVar(value=128) 
+            "thresh": tk.DoubleVar(value=128),
+            "h": tk.DoubleVar(value=1.0), 
+            "s": tk.DoubleVar(value=1.0), 
+            "v": tk.DoubleVar(value=1.0)
         }
 
         self.setup_ui()
@@ -36,8 +40,10 @@ class AdvancedBitmapEditor:
         tk.Button(top_bar, text="✨ Filtre", command=self.toggle_gallery, bg="#444", fg="white", padx=15, borderwidth=0).pack(side=tk.LEFT, padx=5, pady=10)
         tk.Button(top_bar, text="💾 Save", command=self.export_to_disk, 
                   bg="#2e7d32", fg="white", padx=15, borderwidth=0, font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=5, pady=10)
-        
+        tk.Button(top_bar, text="Histograma", command=self.show_histogram, bg="#333", fg="white", padx=15, borderwidth=0).pack(side=tk.LEFT, padx=10, pady=10)
+
         self.main_container = tk.Frame(self.root, bg="#121212")
+
         self.main_container.pack(expand=True, fill=tk.BOTH)
 
         # Sidebar
@@ -93,7 +99,8 @@ class AdvancedBitmapEditor:
                 "cmyk": [("Cyan", "c"), ("Magenta", "m"), ("Yellow", "y_c"), ("Black (K)", "k")],
                 "yuv": [("Luma (Y)", "y_luma"), ("Chroma (U)", "u"), ("Chroma (V)", "v")],
                 "ycbcr": [("Luma (Y)", "y_luma"), ("Chroma (Cb)", "cb"), ("Chroma (Cr)", "cr")],
-                "rgb_back": [("Canal R", "r"), ("Canal G", "g"), ("Canal B", "b")]
+                "rgb_back": [("Canal R", "r"), ("Canal G", "g"), ("Canal B", "b")],
+                "hsv": [("Nuance (H)", "h"), ("Saturation (S)", "s"), ("Value (V)", "v")]
             }
             active_ctrls = config.get(m, [])
             for label, key in active_ctrls:
@@ -157,8 +164,34 @@ class AdvancedBitmapEditor:
                         nr = int((y_v + 1.402 * (cr - 128)) * v["r"])
                         ng = int((y_v - 0.34414 * (cb - 128) - 0.71414 * (cr - 128)) * v["g"])
                         nb = int((y_v + 1.772 * (cb - 128)) * v["b"])
+                elif m == "hsv":
+                    rf, gf, bf_n = r/255.0, g/255.0, b/255.0
+                    M = max(rf, gf, bf_n)
+                    min_val = min(rf, gf, bf_n) # am redenumit 'm' in 'min_val' ca sa nu se confunde cu modul
+                    C = M - min_val
+                    V = M
+                    
+                    S = (C / V) if V != 0 else 0
+
+                    if C != 0:
+                        if M == rf:
+                            H = 60 * (((gf - bf_n) / C) % 6)
+                        elif M == gf:
+                            H = 60 * (((bf_n - rf) / C) + 2)
+                        else:
+                            H = 60 * (((rf - gf) / C) + 4)
+                    else:
+                        H = 0
+                    
+                    # Mapăm valorile pentru a fi vizibile ca imagine (0-255)
+                    # H devine H/360 * 255, S devine S * 255, V devine V * 255
+                    nr = int((H / 360) * 255 * v.get("h", 1.0))
+                    ng = int(S * 255 * v.get("s", 1.0))
+                    nb = int(V * 255 * v.get("v", 1.0))
+
                 else: 
                     nr, ng, nb = int(r * v["r"]), int(g * v["g"]), int(b * v["b"])
+                
 
                 # Brightness & Contrast finale
                 nr = int(nr * b_f * c_f); ng = int(ng * b_f * c_f); nb = int(nb * b_f * c_f)
@@ -201,7 +234,7 @@ class AdvancedBitmapEditor:
 
         modes = [("Original", "none"), ("Gray(1)", "gray(1)"), ("Gray(2)", "gray(2)"), 
                  ("Gray(3)", "gray(3)"), ("Alb/Negru", "binarize"), ("CMYK", "cmyk"), 
-                 ("Negativ", "negative"), ("YUV", "yuv"), ("YCbCr", "ycbcr"), ("RGB Back", "rgb_back")]
+                 ("Negativ", "negative"), ("YUV", "yuv"), ("YCbCr", "ycbcr"), ("RGB Back", "rgb_back"), ("HSV", "hsv")]
 
         thumb_base = self.original_img.copy()
         thumb_base.thumbnail((100, 100))
@@ -243,6 +276,53 @@ class AdvancedBitmapEditor:
         if not self.display_img: return
         file_path = filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=[("Bitmap", "*.bmp")])
         if file_path: self.display_img.save(file_path); messagebox.showinfo("Export", "Salvat!")
+
+    def calculate_histogram(self):
+
+        img = self.display_img
+        width, height = img.size
+        
+        # Inițializăm histograma cu 256 de zerouri
+        histogram = [0] * 256
+        
+        pixels = img.load()
+
+        # Parcurgem imaginea
+        for y in range(height):
+            for x in range(width):
+                r, g, b = pixels[x, y]
+                
+                # Calculăm media pentru tonul de gri (la fel ca în codul tău Java)
+                gray = (r + g + b) // 3
+                
+                # Incrementăm în histogramă
+                histogram[gray] += 1
+                
+        return histogram
+
+    def show_histogram(self):
+        # 1. Verificăm dacă avem o imagine încărcată
+        if not self.display_img:
+            messagebox.showwarning("Atenție", "Încarcă o imagine mai întâi!")
+            return
+        
+        # 2. Calculăm datele (folosind metoda ta existentă)
+        hist_data = self.calculate_histogram()
+        
+        # 3. Afișăm graficul
+        self.plot_histogram(hist_data)
+
+    def plot_histogram(self, histogram):
+        # Creăm graficul într-o fereastră separată (Matplotlib face asta automat cu .show())
+        plt.figure("Analiză Histogramă", figsize=(8, 5))
+        plt.bar(range(256), histogram, color='#555555', width=1.0)
+        plt.title("Distribuția tonurilor de gri")
+        plt.xlabel("Intensitate Pixel (0-255)")
+        plt.ylabel("Frecvență (Număr Pixeli)")
+        plt.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+        plt.show()
+
 
 if __name__ == "__main__":
     root = tk.Tk(); app = AdvancedBitmapEditor(root); root.mainloop()
