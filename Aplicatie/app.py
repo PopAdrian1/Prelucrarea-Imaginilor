@@ -49,7 +49,7 @@ class AdvancedBitmapEditor:
         
         edit_frame = tk.LabelFrame(self.sidebar, text=" CONTROL EDITARE ", fg="#4caf50", bg="#1a1a1a", padx=10, pady=10)
         edit_frame.pack(fill=tk.X, padx=10, pady=10)
-        tk.Button(edit_frame, text="✅ Salvează în Memorie", command=self.confirm_save, bg="#2e7d32", fg="white", borderwidth=0).pack(fill=tk.X, pady=2)
+        tk.Button(edit_frame, text="✅ Salvează modificările", command=self.confirm_save, bg="#2e7d32", fg="white", borderwidth=0).pack(fill=tk.X, pady=2)
         tk.Button(edit_frame, text="❌ Resetează Imaginea", command=self.cancel_edits, bg="#c62828", fg="white", borderwidth=0).pack(fill=tk.X, pady=2)
 
         tk.Label(self.sidebar, text="⚙️ PARAMETRI FILTRU", fg="cyan", bg="#1a1a1a", font=("Arial", 9, "bold")).pack(pady=5)
@@ -304,7 +304,7 @@ class AdvancedBitmapEditor:
         if self.display_img: self.render_with_custom(self.display_img)
 
     def confirm_save(self):
-        if self.display_img: self.original_img = self.display_img.copy(); messagebox.showinfo("OK", "Salvat în memorie!")
+        if self.display_img: self.original_img = self.display_img.copy(); 
 
     def cancel_edits(self):
         for k, v in self.vars.items(): v.set(128 if k=="thresh" else 1.0)
