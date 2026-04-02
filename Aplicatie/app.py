@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 class AdvancedBitmapEditor:
     def __init__(self, root):
         self.root = root
-        self.root.title("Advanced Bitmap Editor - Toate Filtrele + Analiză")
+        self.root.title("Advanced Bitmap Editor")
         self.root.geometry("1550x950")
         self.root.configure(bg="#121212")
 
@@ -96,8 +96,8 @@ class AdvancedBitmapEditor:
                 # Prag pentru a detecta obiectul (orice nu e alb)
                 if r < 240 or g < 240 or b < 240:
                     m00 += 1 # Numărul de pixeli care fac parte din obiect
-                    m10 += x # Sumă ponderată pe axa X
-                    m01 += y # Sumă ponderată pe axa Y
+                    m10 += x # Sumă pe axa X
+                    m01 += y # Sumă pe axa Y
                     coords.append((x, y)) 
         
         if m00 == 0:
