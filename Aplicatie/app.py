@@ -478,12 +478,6 @@ class AdvancedBitmapEditor:
         top_bar = tk.Frame(self.root, bg="#161622", height=56)
         top_bar.pack(side=tk.TOP, fill=tk.X)
 
-        # Logo / titlu
-        tk.Label(
-            top_bar, text="🖼  BMP Editor",
-            bg="#161622", fg="#89b4fa",
-            font=("Consolas", 11, "bold")
-        ).pack(side=tk.LEFT, padx=14, pady=14)
 
         tk.Frame(top_bar, bg="#333355", width=1).pack(
             side=tk.LEFT, fill=tk.Y, padx=4)
@@ -520,14 +514,11 @@ class AdvancedBitmapEditor:
             ("🔽  Minim 3×3",                  lambda: self.preview_filter("minim")),
             ("🔼  Maxim 3×3",                  lambda: self.preview_filter("maxim")),
             ("✨  Accentuare",                 lambda: self.preview_filter("accentuare")),
-        ])
-
-        # ── Meniu Lab 6 — Filtre avansate ───────────────────────────────────
-        make_dropdown_button(top_bar, self.root, "🔬 Lab 6 ▾", "#1a3a2a", [
             ("🔲  Laplacian",                  lambda: self.preview_filter("laplacian")),
-            ("🌫  Denoise Gaussian",           lambda: self.preview_filter("gaussian_denoise")),
+            ("🌫  Eliminare zgomot Gaussian",           lambda: self.preview_filter("gaussian_denoise")),
             ("🔗  LoG (Laplacian of Gaussian)",lambda: self.preview_filter("log")),
         ])
+
 
         # ── Meniu Detectie contur ────────────────────────────────────────────
         make_dropdown_button(top_bar, self.root, "🧵 Contururi ▾", "#2a1a3a", [

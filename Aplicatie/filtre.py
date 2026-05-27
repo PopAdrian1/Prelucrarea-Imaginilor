@@ -1,23 +1,18 @@
 """
-filtre.py — Filtre de procesare a imaginilor
-=============================================
+
 Conține:
   • Filtre pixel-cu-pixel (grayscale, binarizare, CMYK, negative, YUV, YCbCr, HSV, RGB back)
   • Filtre pe imagine întreagă bazate pe kernel 3×3 (mediere, median, minim, maxim, accentuare)
   • Filtre noi: Laplacian, eliminare zgomot Gaussian, SNR (2 variante)
   • Filtre detecție contur: Vertical, Horizontal, Sobel V/H, Scharr V/H
   • Laplacianul Gaussianului (LoG)
-
-NOTĂ: Nu se folosește OpenCV. Se folosește doar PIL/Pillow și numpy (doar unde e permis).
 """
 
 import math
 from PIL import Image
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  FILTRE GRAYSCALE — Lab 1 & 2
-# ══════════════════════════════════════════════════════════════════════════════
 
 def filter_gray_1(r, g, b, v):
     """
@@ -62,9 +57,9 @@ def binarizare(r, g, b, v):
     return val, val, val
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 #  FILTRE SPAȚIU DE CULOARE — Lab 2
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 def filtru_cmyk(r, g, b, v):
     """
@@ -102,9 +97,8 @@ def filtru_negativ(r, g, b, v):
     return nr, ng, nb
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  SPAȚIU LUMINANȚĂ/CROMINANȚĂ — Lab 2 & 3
-# ══════════════════════════════════════════════════════════════════════════════
+
+#  SPAȚIU LUMINANȚĂ/CROMINANȚĂ — Lab 3
 
 def filtru_yuv(r, g, b, v):
     """
@@ -151,9 +145,8 @@ def rgb_back(r, g, b, v):
     return nr, ng, nb
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  SPAȚIUL HSV — Lab 3
-# ══════════════════════════════════════════════════════════════════════════════
+#  SPAȚIUL HSV — Lab 4
+
 
 def filtru_hsv(r, g, b, v):
     """
@@ -193,9 +186,7 @@ def filtru_hsv(r, g, b, v):
     return nr, ng, nb
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  FILTRE KERNEL 3×3 — Lab 5 (bazate pe convoluție)
-# ══════════════════════════════════════════════════════════════════════════════
+#  FILTRE KERNEL 3×3 — Lab 5 
 
 def apply_kernel_3x3(img, kernel):
     """
@@ -370,9 +361,7 @@ def filtru_accentuare(img, alpha=0.6):
     return dst
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  FILTRUL LAPLACIAN — Lab 6
-# ══════════════════════════════════════════════════════════════════════════════
 
 def filtru_laplacian(img):
     """
