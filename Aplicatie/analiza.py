@@ -160,9 +160,9 @@ def calculeaza_momente_centrale(img):
     return {"mu20": mu20, "mu02": mu02, "mu11": mu11}
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 #  MATRICEA DE COVARIANȚĂ — orientarea și forma obiectului
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 def calculeaza_covarianta(img):
     """
@@ -198,9 +198,9 @@ def calculeaza_covarianta(img):
     return {"m20": m20, "m02": m02, "m11": m11}
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 #  PROIECȚII — distribuția pe axe
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 def calculeaza_proiectii(img):
     """
@@ -236,9 +236,7 @@ def calculeaza_proiectii(img):
     return {"pv": pv, "ph": ph, "w": w, "h": h}
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  SNR — Raport Semnal/Zgomot (Signal-to-Noise Ratio)
-# ══════════════════════════════════════════════════════════════════════════════
 
 def calculeaza_snr_singura(img):
     """
@@ -253,13 +251,6 @@ def calculeaza_snr_singura(img):
     Un SNR mic înseamnă imagine aproape gri sau cu mult zgomot.
 
     Returnează valoarea SNR în dB (float) sau None dacă zgomotul = 0.
-
-    Pseudocod:
-      suma_semnal = suma_zgomot = 0
-      pentru fiecare pixel (x,y):
-        s = R(x,y); z = |255 - s|
-        suma_semnal += s; suma_zgomot += z
-      snr = 10 * log10((media_s)^2 / (media_z)^2)
     """
     src = img.convert("RGB")
     w, h = src.size
@@ -299,12 +290,6 @@ def calculeaza_snr_doua(img1, img2):
 
     Returnează valoarea SNR în dB (float) sau None.
 
-    Pseudocod:
-      pentru fiecare pixel (x,y):
-        semnal = |R1(x,y) - R2(x,y)|  (diferența dintre imagini)
-        zgomot = |R1(x,y)|             (valoarea originală ca referință)
-        suma_semnal += semnal; suma_zgomot += zgomot
-      snr = 10 * log10((media_s)^2 / (media_z)^2)
     """
     src1 = img1.convert("RGB")
     src2 = img2.convert("RGB")
@@ -338,9 +323,7 @@ def calculeaza_snr_doua(img1, img2):
     return 10 * math.log10((media_s ** 2) / (media_z ** 2))
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  RAPORT COMPLET DE ANALIZĂ
-# ══════════════════════════════════════════════════════════════════════════════
 
 def raport_complet(img):
     """

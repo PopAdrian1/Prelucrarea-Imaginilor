@@ -454,90 +454,6 @@ def filtru_gaussian_noise_removal(img):
     return dst
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  SNR — Lab 6 (Signal-to-Noise Ratio)
-# ══════════════════════════════════════════════════════════════════════════════
-
-def calculeaza_snr_singur(img):
-    """
-    Calculează SNR pentru o singură imagine.
-    Semnal = media intensității pixelilor (canal R)
-    Zgomot = media lui |255 - intensitate| (distanța față de alb = zgomot estimat)
-    Formula: SNR = 10 * log10(semnal_mediu^2 / zgomot_mediu^2)   [dB]
-
-    Pseudocod:
-      suma_semnal = suma_zgomot = 0
-      pentru fiecare pixel (x,y):
-        semnal = R(x,y)
-        zgomot = |255 - semnal|
-        suma_semnal += semnal; suma_zgomot += zgomot
-      snr = 10 * log10((media_semnal)^2 / (media_zgomot)^2)
-
-    Returnează valoarea SNR în dB (float).
-    """
-    src = img.convert("RGB")
-    w, h = src.size
-    px = src.load()
-    signal_sum = 0
-    noise_sum = 0
-
-    for y in range(h):
-        for x in range(w):
-            signal = px[x, y][0]               # Canal R ca semnal
-            noise = abs(255 - signal)           # Distanța față de alb = zgomot
-            signal_sum += signal
-            noise_sum += noise
-
-    n = w * h
-    signal_mean = signal_sum / n
-    noise_mean = noise_sum / n
-
-    # Evităm împărțirea la zero
-    if noise_mean == 0:
-        return float('inf')
-    return 10 * math.log10((signal_mean ** 2) / (noise_mean ** 2))
-
-
-def calculeaza_snr_doua_imagini(img1, img2):
-    """
-    Calculează SNR comparând două imagini (originală vs. procesată).
-    Semnal = diferența absolută între pixelii corespunzători
-    Zgomot = valoarea absolută a pixelilor din imaginea originală
-    Formula: SNR = 10 * log10(media_semnal^2 / media_zgomot^2)   [dB]
-
-    Pseudocod:
-      pentru fiecare pixel (x,y):
-        semnal = |RGB1(x,y) - RGB2(x,y)|   (diferență pe canal R)
-        zgomot = |RGB1(x,y)|
-        suma_semnal += semnal; suma_zgomot += zgomot
-      snr = 10 * log10((media_semnal)^2 / (media_zgomot)^2)
-
-    Returnează valoarea SNR în dB (float).
-    """
-    src1 = img1.convert("RGB")
-    src2 = img2.convert("RGB")
-    w, h = src1.size
-    px1 = src1.load()
-    px2 = src2.load()
-
-    signal_sum = 0
-    noise_sum = 0
-
-    for y in range(h):
-        for x in range(w):
-            signal = abs(px1[x, y][0] - px2[x, y][0])   # Diferența pe canal R
-            noise = abs(px1[x, y][0])                    # Valoarea originală
-            signal_sum += signal
-            noise_sum += noise
-
-    n = w * h
-    signal_mean = signal_sum / n
-    noise_mean = noise_sum / n
-
-    if noise_mean == 0 or signal_mean == 0:
-        return float('inf')
-    return 10 * math.log10((signal_mean ** 2) / (noise_mean ** 2))
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  FILTRE DETECȚIE CONTUR — Lab 7
@@ -555,8 +471,8 @@ FILTER_SCHARR_H  = [[3, 10, 3], [0, 0, 0], [-3, -10, -3]]  # Scharr pe Y
 def _apply_edge_kernel(img, kernel):
     """
     Funcție auxiliară: aplică un kernel de detecție contur pe imaginea RGB.
-    Se aplică separat pe canalele R, G, B, apoi se sumează.
-    Rezultatul este clamped la [0, 255].
+    Se aplică separat pe canalele R, G, B, apoi se face suma.
+    Rezultatul este normalizat la [0, 255].
     """
     src = img.convert("RGB")
     w, h = src.size
@@ -582,12 +498,12 @@ def _apply_edge_kernel(img, kernel):
 
 
 def filtru_contur_vertical(img):
-    """Detectează marginile verticale (gradient orizontal) cu filtrul simplu."""
+    """Detectează marginile verticale cu filtrul simplu."""
     return _apply_edge_kernel(img, FILTER_VERTICAL)
 
 
 def filtru_contur_orizontal(img):
-    """Detectează marginile orizontale (gradient vertical) cu filtrul simplu."""
+    """Detectează marginile orizontale cu filtrul simplu."""
     return _apply_edge_kernel(img, FILTER_HORIZONTAL)
 
 
@@ -632,9 +548,7 @@ def filtru_scharr_h(img):
     return _apply_edge_kernel(img, FILTER_SCHARR_H)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  LAPLACIANUL GAUSSIANULUI (LoG) — Lab 8
-# ══════════════════════════════════════════════════════════════════════════════
 
 def _gaussian_kernel(size, sigma):
     """
@@ -684,24 +598,18 @@ def _apply_gaussian_filter(img, size=3, sigma=1.4):
 
 def filtru_log(img):
     """
-    Laplacianul Gaussianului (LoG) — detectare margini cu netezire prealabilă.
+    Laplacianul Gaussianului (LoG) — detectare margini cu netezire.
     Pași:
       1. Aplică filtrul Gaussian 3×3 cu sigma=1.4 pentru a reduce zgomotul
       2. Aplică filtrul Laplacian pe imaginea netezită
     Efect: detectează marginile cu mai puțin zgomot față de Laplacianul simplu.
-
-    Pseudocod:
-      imagine_netezita = gaussian(imagine, size=3, sigma=1.4)
-      imagine_margini  = laplacian(imagine_netezita)
-      returnare imagine_margini
     """
     smoothed = _apply_gaussian_filter(img, size=3, sigma=1.4)
     return filtru_laplacian(smoothed)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 #  DICȚIONARE DE MAPARE — folosite de app.py
-# ══════════════════════════════════════════════════════════════════════════════
 
 # Filtre pixel-cu-pixel (funcție(r,g,b,v) -> (nr,ng,nb))
 filters_map = {
