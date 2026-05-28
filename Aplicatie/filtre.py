@@ -29,9 +29,7 @@ def filter_gray_1(r, g, b, v):
 
 def filter_gray_2(r, g, b, v):
     """
-    Conversie RGB -> Grayscale folosind formula luminanței perceptuale (ITU-R BT.601).
     Formula: Gray = 0.299*R + 0.587*G + 0.114*B
-    Aceasta corespunde sensibilității ochiului uman la fiecare culoare.
     Se aplică factorul 'gray_gain' din parametri.
     """
     val = int((0.299 * r + 0.587 * g + 0.114 * b) * v["gray_gain"])
@@ -42,7 +40,6 @@ def filter_gray_3(r, g, b, v):
     """
     Conversie RGB -> Grayscale prin desaturare (media min-max).
     Formula: Gray = (max(R,G,B) + min(R,G,B)) / 2
-    Echivalent cu L din modelul HSL.
     Se aplică factorul 'gray_gain' din parametri.
     """
     val = int(((max(r, g, b) + min(r, g, b)) // 2) * v["gray_gain"])
@@ -53,7 +50,6 @@ def binarizare(r, g, b, v):
     """
     Binarizarea imaginii pe baza unui prag ('thresh').
     Dacă luminanța pixelului > prag => alb (255), altfel negru (0).
-    Luminanța se calculează cu formula ITU BT.601.
     """
     lum = int(0.299 * r + 0.587 * g + 0.114 * b)
     val = 255 if lum > v["thresh"] else 0
@@ -101,7 +97,7 @@ def filtru_negativ(r, g, b, v):
 
 
 
-#  SPAȚIU LUMINANȚĂ/CROMINANȚĂ — Lab 3
+#  SPAȚIU LUMINANȚĂ/CROMINANȚĂ 
 
 def filtru_yuv(r, g, b, v):
     """
@@ -148,7 +144,7 @@ def rgb_back(r, g, b, v):
     return nr, ng, nb
 
 
-#  SPAȚIUL HSV — Lab 4
+#  SPAȚIUL HSV 
 
 
 def filtru_hsv(r, g, b, v):
@@ -189,7 +185,7 @@ def filtru_hsv(r, g, b, v):
     return nr, ng, nb
 
 
-#  FILTRE KERNEL 3×3 — Lab 5 
+#  FILTRE KERNEL 3×3 
 
 def apply_kernel_3x3(img, kernel):
     """
@@ -364,7 +360,7 @@ def filtru_accentuare(img, alpha=0.6):
     return dst
 
 
-#  FILTRUL LAPLACIAN — Lab 6
+#  FILTRUL LAPLACIAN 
 
 def filtru_laplacian(img):
     """
@@ -378,13 +374,6 @@ def filtru_laplacian(img):
     Imaginea este mai întâi convertită la grayscale pentru calcul,
     iar rezultatul este salvat ca RGB (R=G=B=valoare).
 
-    Pseudocod:
-      pentru fiecare pixel (x,y) din interior:
-        sum = 0
-        pentru fiecare vecin (dx,dy) in [-1,0,1]:
-          sum += kernel[dx+1][dy+1] * pixel_gri(x+dx, y+dy)
-        clampam sum la [0,255]
-        rezultat(x,y) = (sum, sum, sum)
     """
     # Kernel Laplacian 3×3
     kernel = [
@@ -412,9 +401,7 @@ def filtru_laplacian(img):
     return dst
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  ELIMINARE ZGOMOT GAUSSIAN — Lab 6
-# ══════════════════════════════════════════════════════════════════════════════
 
 def filtru_gaussian_noise_removal(img):
     """
@@ -422,14 +409,6 @@ def filtru_gaussian_noise_removal(img):
     (Spre deosebire de filtru_mediere, acesta nu lasă marginile negre —
      folosește 'mirror padding': pixelii de margine se clampează la bord.)
 
-    Pseudocod:
-      pentru fiecare pixel (x,y):
-        suma_R = suma_G = suma_B = 0
-        pentru fiecare offset (i,j) in [-1,0,1]:
-          nx = clamp(x+i, 0, w-1)   # reflectare pe margini
-          ny = clamp(y+j, 0, h-1)
-          suma_R += R(nx,ny); suma_G += G(nx,ny); suma_B += B(nx,ny)
-        pixel_nou = (suma_R/9, suma_G/9, suma_B/9)
     """
     src = img.convert("RGB")
     w, h = src.size
@@ -458,9 +437,8 @@ def filtru_gaussian_noise_removal(img):
 
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  FILTRE DETECȚIE CONTUR — Lab 7
-# ══════════════════════════════════════════════════════════════════════════════
+#  FILTRE DETECȚIE CONTUR 
+
 
 # Definim kernelele de detecție a contururilor conform laboratorului
 FILTER_VERTICAL  = [[1, 0, -1], [1, 0, -1], [1, 0, -1]]
