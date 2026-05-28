@@ -206,7 +206,7 @@ class AdvancedBitmapEditor:
     def _build_ui(self):
         """Construiește întreaga interfață: top bar, sidebar, canvas, status bar."""
 
-        # ── Top navigation bar ──────────────────────────────────────────────
+        # ── Top navigation bar 
         top_bar = tk.Frame(self.root, bg="#161622", height=56)
         top_bar.pack(side=tk.TOP, fill=tk.X)
 
@@ -214,7 +214,7 @@ class AdvancedBitmapEditor:
         tk.Frame(top_bar, bg="#333355", width=1).pack(
             side=tk.LEFT, fill=tk.Y, padx=4)
 
-        # ── Meniu Fisier ────────────────────────────────────────────────────
+        # ── Meniu Fisier 
         make_dropdown_button(top_bar, self.root, "📁 Fișier ▾", "#222233", [
             ("📂  Încarcă imagine",           self.load_image),
             ("💾  Exportă (Save As)",         self.export_to_disk),
@@ -226,7 +226,7 @@ class AdvancedBitmapEditor:
             ("📂  Deschide fișier .lzw",       self._open_lzw_file),
         ])
 
-        # ── Meniu Filtre clasice ─────────────────────────────────────────────
+        # ── Meniu Filtre clasice 
         make_dropdown_button(top_bar, self.root, "✨ Filtre ▾", "#1a2a3a", [
             ("⬛  Negativ",                    lambda: self.preview_filter("negative")),
             ("🔲  Binarizare",                 lambda: self.preview_filter("binarize")),
@@ -259,7 +259,7 @@ class AdvancedBitmapEditor:
         ])
 
 
-        # ── Meniu Detectie contur ────────────────────────────────────────────
+        # ── Meniu Detectie contur 
         make_dropdown_button(top_bar, self.root, "🧵 Contururi ▾", "#2a1a3a", [
             ("↕  Contur Vertical",             lambda: self.preview_filter("contur_v")),
             ("↔  Contur Orizontal",            lambda: self.preview_filter("contur_h")),
@@ -273,7 +273,7 @@ class AdvancedBitmapEditor:
             ("🎯  Canny Edge Detection",       lambda: self._apply_canny()),
         ])
 
-        # ── Meniu Transformări ───────────────────────────────────────────────
+        # ── Meniu Transformări 
         make_dropdown_button(top_bar, self.root, "🧪 Transformări ▾", "#3a1a2a", [
             ("📡  Transformata Fourier",       lambda: self._apply_transform("fourier")),
             ("🎨  Floyd-Steinberg Dithering",  lambda: self._apply_transform("floyd")),
@@ -288,13 +288,13 @@ class AdvancedBitmapEditor:
             ("📏  RLE Decode",                 lambda: self._apply_transform("rle_dec")),
         ])
 
-        # ── Meniu Histogramă ─────────────────────────────────────────────────
+        # ── Meniu Histogramă 
         make_dropdown_button(top_bar, self.root, "📊 Histogramă ▾", "#1a3a3a", [
             ("📊  Afișează histograma",        self.show_histogram),
             ("📈  Egalizare histogramă",       lambda: self._apply_lab5("equalize")),
         ])
 
-        # ── Meniu Analiza ────────────────────────────────────────────────────
+        # ── Meniu Analiza 
         make_dropdown_button(top_bar, self.root, "🔍 Analiză ▾", "#2a2a1a", [
             ("📍  Centru greutate (M1)",        self.show_center_m1),
             ("📐  Momente centrale (M2)",       self.show_moments_m2),
@@ -313,7 +313,7 @@ class AdvancedBitmapEditor:
 
 
 
-        # ── Corp principal ────────────────────────────────────────────────────
+        # ── Corp principal 
         main = tk.Frame(self.root, bg="#0d0d14")
         main.pack(expand=True, fill=tk.BOTH)
 
@@ -328,7 +328,7 @@ class AdvancedBitmapEditor:
         self._build_sidebar()
         # Nu facem pack() acum — sidebar-ul e ascuns la start
 
-        # ── Status bar jos ────────────────────────────────────────────────────
+        # ── Status bar jos
         status = tk.Frame(self.root, bg="#0a0a18", height=30)
         status.pack(side=tk.BOTTOM, fill=tk.X)
         self.status_var = tk.StringVar(value="  Nicio imagine încărcată.")
@@ -348,7 +348,7 @@ class AdvancedBitmapEditor:
         """
         sb = self.sidebar
 
-        # ── Titlu operație activă ─────────────────────────────────────────────
+        # ── Titlu operație activă 
         self.sidebar_title_var = tk.StringVar(value="")
         self.sidebar_title_lbl = tk.Label(
             sb, textvariable=self.sidebar_title_var,
@@ -358,7 +358,7 @@ class AdvancedBitmapEditor:
         )
         self.sidebar_title_lbl.pack(pady=(12, 4), padx=10, anchor="w")
 
-        # ── Control editare ───────────────────────────────────────────────────
+        # ── Control editare 
         ctrl = tk.Frame(sb, bg="#111120", padx=8)
         ctrl.pack(fill=tk.X, padx=8, pady=(0, 6))
 
@@ -381,11 +381,11 @@ class AdvancedBitmapEditor:
         # Separator
         tk.Frame(sb, bg="#333355", height=1).pack(fill=tk.X, padx=8, pady=4)
 
-        # ── Container dinamic — se reconstruiește la fiecare operație ──────────
+        # ── Container dinamic — se reconstruiește la fiecare operație 
         self.dyn_frame = tk.Frame(sb, bg="#111120", padx=8)
         self.dyn_frame.pack(fill=tk.X, expand=True)
 
-        # Spinbox pentru etichetare (Lab 4) — creat o singură dată, ascuns implicit
+        # Spinbox pentru etichetare  — creat o singură dată, ascuns implicit
         self._lab4_frame = tk.LabelFrame(
             sb, text=" 🏷  ETICHETARE ",
             fg="#b4befe", bg="#111120",
@@ -424,16 +424,16 @@ class AdvancedBitmapEditor:
             command=lambda _: self._on_slider_change()
         ).pack(fill=tk.X, pady=(0, 4))
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  SIDEBAR DINAMIC — se actualizează la fiecare filtru selectat
-    # ─────────────────────────────────────────────────────────────────────────
+
 
     def update_sidebar_dynamic(self, mode):
         """
         Afișează/ascunde sidebar-ul și construiește parametrii specifici operației active.
         Dacă mode este 'none' sau None, sidebar-ul se ascunde complet.
         """
-        # ── Mapare mod → (titlu, listă parametri) ─────────────────────────────
+        # ── Mapare mod → (titlu, listă parametri) 
         SIDEBAR_CONFIG = {
             # Filtre cu parametri de canal
             "negative":  ("⬛ Negativ",
@@ -506,18 +506,18 @@ class AdvancedBitmapEditor:
 
         title, params = cfg
 
-        # ── Afișează sidebar-ul pe dreapta ────────────────────────────────────
+        # ── Afișează sidebar-ul pe dreapta 
         self.sidebar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # ── Actualizează titlul ───────────────────────────────────────────────
+        # ── Actualizează titlul 
         self.sidebar_title_var.set(f"⚙ {title}")
 
-        # ── Curăță frame-ul dinamic ───────────────────────────────────────────
+        # ── Curăță frame-ul dinamic 
         for w in self.dyn_frame.winfo_children():
             w.destroy()
         self._lab4_frame.pack_forget()
 
-        # ── Construiește parametrii specifici ─────────────────────────────────
+        # ── Construiește parametrii specifici 
         if params is None:
             # Filtre fără parametri — afișăm luminozitate/contrast global
             glob = tk.LabelFrame(
@@ -616,9 +616,8 @@ class AdvancedBitmapEditor:
             self._make_slider(glob, "Luminozitate", "bright", 0.0, 3.0, 0.05)
             self._make_slider(glob, "Contrast",     "contrast", 0.0, 3.0, 0.05)
 
-    # ─────────────────────────────────────────────────────────────────────────
-    #  HELPERS GENERALE
-    # ─────────────────────────────────────────────────────────────────────────
+
+    #  GENERALE
 
     def _require_image(self):
         """Verifică dacă există o imagine încărcată. Afișează avertisment dacă nu."""
@@ -700,9 +699,9 @@ class AdvancedBitmapEditor:
                 self.original_img.copy(), self.active_mode)
             self.render_main()
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  FIȘIER
-    # ─────────────────────────────────────────────────────────────────────────
+
 
     def load_image(self):
         """Deschide dialog și încarcă imaginea selectată."""
@@ -769,9 +768,9 @@ class AdvancedBitmapEditor:
             self.display_img.save(path)
             self._set_status(f"Exportat: {path.split('/')[-1]}")
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  FILTRE CLASICE — preview live
-    # ─────────────────────────────────────────────────────────────────────────
+
 
     def preview_filter(self, mode):
         """
@@ -788,9 +787,9 @@ class AdvancedBitmapEditor:
         self._set_status(
             f"Preview: {mode}  —  Apasă 'Salvează' pentru a confirma sau 'Resetează' pentru a anula.")
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  CANNY EDGE DETECTION
-    # ─────────────────────────────────────────────────────────────────────────
+
 
     def _apply_canny(self):
         """
@@ -812,9 +811,8 @@ class AdvancedBitmapEditor:
         self._set_status(
             f"✔  Canny aplicat — prag inferior={low}, prag superior={high}, iterații={it}")
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  TRANSFORMĂRI (Fourier, Floyd-Steinberg, LZW, Huffman, RLE)
-    # ─────────────────────────────────────────────────────────────────────────
 
     def _apply_transform(self, operation):
         """Aplică transformarea specificată și afișează rezultatul."""
@@ -915,9 +913,9 @@ class AdvancedBitmapEditor:
                     f"✔  {names.get(operation, operation)} aplicat.  "
                     "Apasă 'Salvează' pentru a confirma.")
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  LZW ca fișier (compress/decompress de pe disc)
-    # ─────────────────────────────────────────────────────────────────────────
+  
 
     def _compress_lzw_file(self):
         """
@@ -972,9 +970,9 @@ class AdvancedBitmapEditor:
         except Exception as e:
             messagebox.showerror("Eroare LZW", str(e))
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  LAB 4 — Etichetare + Sobel
-    # ─────────────────────────────────────────────────────────────────────────
+
 
     def _apply_labeling(self):
         """Rulează etichetarea BFS și colorează obiectele distinct."""
@@ -1058,9 +1056,8 @@ class AdvancedBitmapEditor:
             f"✔  Sobel — Direcție: {deg:.1f}°  |  "
             f"Magnitudine: {mag:.1f}  |  Peak: ({px},{py})")
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  LAB 5 — Morfologie + Egalizare
-    # ─────────────────────────────────────────────────────────────────────────
 
     def _apply_lab5(self, operation):
         """Aplică operația morfologică sau egalizarea histogramei."""
@@ -1092,9 +1089,8 @@ class AdvancedBitmapEditor:
             f"✔  {names.get(operation)} aplicat.  "
             "Apasă 'Salvează' pentru a confirma.")
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  HISTOGRAMĂ
-    # ─────────────────────────────────────────────────────────────────────────
 
     def show_histogram(self):
         """
@@ -1135,9 +1131,8 @@ class AdvancedBitmapEditor:
         plt.tight_layout()
         plt.show()
 
-    # ─────────────────────────────────────────────────────────────────────────
     #  ANALIZĂ OBIECT
-    # ─────────────────────────────────────────────────────────────────────────
+
 
     def show_center_m1(self):
         """Calculează și afișează centrul de greutate (M1)."""
@@ -1310,9 +1305,8 @@ class AdvancedBitmapEditor:
         txt.config(state="disabled")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 #  PUNCT DE INTRARE
-# ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     root = tk.Tk()
