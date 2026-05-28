@@ -1,11 +1,14 @@
 """
-
+filtre.py — Filtre de procesare a imaginilor
+=============================================
 Conține:
   • Filtre pixel-cu-pixel (grayscale, binarizare, CMYK, negative, YUV, YCbCr, HSV, RGB back)
   • Filtre pe imagine întreagă bazate pe kernel 3×3 (mediere, median, minim, maxim, accentuare)
   • Filtre noi: Laplacian, eliminare zgomot Gaussian, SNR (2 variante)
   • Filtre detecție contur: Vertical, Horizontal, Sobel V/H, Scharr V/H
   • Laplacianul Gaussianului (LoG)
+  • Egalizare histogramă
+  • Operații morfologice: dilatare, eroziune, deschidere, închidere (Lab 5)
 """
 
 import math
@@ -642,3 +645,146 @@ filters_map_img = {
     "scharr_v":          lambda img, v: filtru_scharr_v(img),
     "scharr_h":          lambda img, v: filtru_scharr_h(img),
 }
+
+
+#  EGALIZARE HISTOGRAMĂ 
+
+def equalize_histogram(img):
+    """
+    Egalizează histograma imaginii pentru îmbunătățirea contrastului.
+
+    Algoritmul:
+      1. Calculăm histograma h[i] pentru fiecare nivel de gri i ∈ [0,255]
+      2. Calculăm histograma cumulativă hc[i]
+      3. Transformarea: T(i) = (hc[i] - hc[0]) * 255 / (N - hc[0])
+         unde N = numărul total de pixeli
+    """
+    gray = img.convert("L")
+    w, h = gray.size
+    pix = gray.load()
+    N = w * h
+
+    # Calculăm histograma
+    hist = [0] * 256
+    for y in range(h):
+        for x in range(w):
+            hist[pix[x, y]] += 1
+
+    # Histograma cumulativă
+    hc = [0] * 256
+    hc[0] = hist[0]
+    for i in range(1, 256):
+        hc[i] = hc[i-1] + hist[i]
+
+    # Transformarea de egalizare
+    hc0 = hc[0]
+    denom = max(N - hc0, 1)
+    T = [int(round((hc[i] - hc0) * 255 / denom)) for i in range(256)]
+
+    # Aplicăm transformarea
+    result = Image.new("L", (w, h))
+    rpix = result.load()
+    for y in range(h):
+        for x in range(w):
+            rpix[x, y] = T[pix[x, y]]
+    return result.convert("RGB")
+
+
+#  OPERAȚII MORFOLOGICE 
+
+def _to_binary(img, threshold=128):
+    """Convertește imaginea la matrice binară (1=obiect negru, 0=fundal alb)."""
+    gray = img.convert("L")
+    w, h = gray.size
+    pix = gray.load()
+    return [[1 if pix[x, y] < threshold else 0
+             for x in range(w)] for y in range(h)], w, h
+
+
+def _from_binary(matrix, w, h):
+    """Reconstruiește imaginea PIL dintr-o matrice binară."""
+    result = Image.new("L", (w, h), 255)
+    pix = result.load()
+    for y in range(h):
+        for x in range(w):
+            if matrix[y][x] == 1:
+                pix[x, y] = 0
+    return result.convert("RGB")
+
+
+def dilate(img, kernel_size=3, iterations=1):
+    """
+    Operația de dilatare morfologică.
+    Extinde obiectele (pixeli negri) cu kernel_size x kernel_size pe iterations iterații.
+    Un pixel devine obiect dacă cel puțin un vecin din kernelul structural e obiect.
+    """
+    matrix, w, h = _to_binary(img)
+    half = kernel_size // 2
+    for _ in range(iterations):
+        new_m = [[0] * w for _ in range(h)]
+        for y in range(h):
+            for x in range(w):
+                found = False
+                for ky in range(-half, half + 1):
+                    for kx in range(-half, half + 1):
+                        ny, nx = y + ky, x + kx
+                        if 0 <= ny < h and 0 <= nx < w and matrix[ny][nx] == 1:
+                            found = True
+                            break
+                    if found:
+                        break
+                new_m[y][x] = 1 if found else 0
+        matrix = new_m
+    return _from_binary(matrix, w, h)
+
+
+def erode(img, kernel_size=3, iterations=1):
+    """
+    Operația de eroziune morfologică.
+    Subțiază obiectele (pixeli negri). Un pixel rămâne obiect doar dacă
+    toți vecinii din kernelul structural sunt și ei obiect.
+    """
+    matrix, w, h = _to_binary(img)
+    half = kernel_size // 2
+    for _ in range(iterations):
+        new_m = [[0] * w for _ in range(h)]
+        for y in range(h):
+            for x in range(w):
+                if matrix[y][x] == 0:
+                    continue
+                all_one = True
+                for ky in range(-half, half + 1):
+                    for kx in range(-half, half + 1):
+                        ny, nx = y + ky, x + kx
+                        if not (0 <= ny < h and 0 <= nx < w) or matrix[ny][nx] == 0:
+                            all_one = False
+                            break
+                    if not all_one:
+                        break
+                new_m[y][x] = 1 if all_one else 0
+        matrix = new_m
+    return _from_binary(matrix, w, h)
+
+
+def opening(img, kernel_size=3, iterations=1):
+    """
+    Deschidere morfologică = Eroziune urmată de Dilatare.
+    Elimină zgomotul mic (obiecte mici) fără a modifica semnificativ forma.
+    """
+    result = img
+    for _ in range(iterations):
+        result = erode(result, kernel_size, 1)
+        result = dilate(result, kernel_size, 1)
+    return result
+
+
+def closing(img, kernel_size=3, iterations=1):
+    """
+    Închidere morfologică = Dilatare urmată de Eroziune.
+    Umple găurile mici din obiecte fără a modifica semnificativ forma.
+    """
+    result = img
+    for _ in range(iterations):
+        result = dilate(result, kernel_size, 1)
+        result = erode(result, kernel_size, 1)
+    return result

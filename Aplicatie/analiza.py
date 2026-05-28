@@ -1,6 +1,4 @@
 """
-analiza.py — Analiză statistică și geometrică a obiectelor din imagini
-=======================================================================
 Conține:
   • Calculul centrului de greutate (momentul de ordinul 1)
   • Momentele centrale de ordinul 2 (mu20, mu02, mu11)
@@ -8,17 +6,18 @@ Conține:
   • Proiecțiile orizontală și verticală
   • Calcul SNR (o singură imagine și două imagini comparate)
   • Raport complet de analiză (toate metricile reunite)
+  • Etichetare componente
+  • Generare culori etichete, randare, extragere mască obiect
+  • Calcul orientare Sobel pe mască obiect
 
-NOTĂ: Nu se folosește OpenCV. Se folosește doar PIL/Pillow și math.
 """
 
 import math
+from collections import deque
 from PIL import Image, ImageDraw
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  DETECȚIE OBIECT — extragere pixeli non-albi
-# ══════════════════════════════════════════════════════════════════════════════
 
 def detecteaza_pixeli_obiect(img, prag_alb=240):
     """
@@ -26,23 +25,6 @@ def detecteaza_pixeli_obiect(img, prag_alb=240):
 
     Parcurgem fiecare pixel al imaginii. Dacă cel puțin unul dintre canalele
     R, G, B este sub pragul 'prag_alb', pixelul este considerat obiect.
-
-    Parametri:
-        img       — imagine PIL.Image (convertită automat la RGB)
-        prag_alb  — prag superior pentru fundal (default 240)
-
-    Returnează:
-        dict cu: m00 (număr pixeli obiect), xc, yc (centru de greutate),
-                 coords (lista de tupluri (x, y)), w, h (dimensiuni imagine)
-        None dacă nu s-a detectat niciun obiect.
-
-    Pseudocod:
-      m00 = 0; m10 = 0; m01 = 0; coords = []
-      pentru fiecare pixel (x,y):
-        dacă pixel este obiect (R<prag sau G<prag sau B<prag):
-          m00 += 1; m10 += x; m01 += y; coords.append((x,y))
-      dacă m00 == 0: returnează None
-      returnează {m00, xc=m10/m00, yc=m01/m00, coords, w, h}
     """
     img_rgb = img.convert("RGB")
     w, h = img_rgb.size
@@ -76,9 +58,7 @@ def detecteaza_pixeli_obiect(img, prag_alb=240):
     }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  MOMENTUL DE ORDINUL 1 — centrul de greutate
-# ══════════════════════════════════════════════════════════════════════════════
 
 def calculeaza_centru_greutate(img):
     """
@@ -90,11 +70,6 @@ def calculeaza_centru_greutate(img):
 
     Returnează (xc, yc) sau None dacă imaginea nu conține obiect.
 
-    Pseudocod:
-      m00 = m10 = m01 = 0
-      pentru fiecare pixel obiect (x,y):
-        m00 += 1; m10 += x; m01 += y
-      xc = m10 / m00; yc = m01 / m00
     """
     data = detecteaza_pixeli_obiect(img)
     if data is None:
@@ -119,9 +94,7 @@ def deseneaza_centru(img, xc, yc, raza=6, culoare="red"):
     return copie
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  MOMENTELE CENTRALE DE ORDINUL 2 — distribuția masei față de centru
-# ══════════════════════════════════════════════════════════════════════════════
 
 def calculeaza_momente_centrale(img):
     """
@@ -137,13 +110,6 @@ def calculeaza_momente_centrale(img):
 
     Returnează dict {mu20, mu02, mu11} sau None.
 
-    Pseudocod:
-      Calculăm (xc, yc) din momentele de ordinul 1
-      mu20 = mu02 = mu11 = 0
-      pentru fiecare pixel obiect (x,y):
-        mu20 += (x - xc)^2
-        mu02 += (y - yc)^2
-        mu11 += (x - xc) * (y - yc)
     """
     data = detecteaza_pixeli_obiect(img)
     if data is None:
@@ -177,10 +143,6 @@ def calculeaza_covarianta(img):
     Valorile proprii dau alungirea pe fiecare axă.
 
     Returnează dict {m20, m02, m11} sau None.
-
-    Pseudocod:
-      Calculăm momentele centrale mu20, mu02, mu11
-      Normalizăm: m20 = mu20 / m00, etc.
     """
     data = detecteaza_pixeli_obiect(img)
     if data is None:
@@ -379,3 +341,121 @@ def raport_complet(img):
         "bbox":           bbox,
         "orientare_grade": round(orientare_grade, 1),
     }
+
+
+
+#  ETICHETARE COMPONENTE 
+
+
+def label_connected_components(img):
+    """
+    Etichetează componentele conexe ale obiectelor din imagine (BFS/flood-fill).
+
+    Algoritmul:
+      1. Convertim imaginea la grayscale
+      2. Parcurgem fiecare pixel; dacă e întunecat (< 128) și neetichetat:
+         - Pornim BFS din acel pixel
+         - Propagăm eticheta la toți vecinii 8-conectați întunecați
+      3. Rezultat: matrice labels[y][x] = numărul obiectului (0 = fundal)
+
+    Returnează (labels, num_labels).
+    """
+    gray = img.convert("L")
+    w, h = gray.size
+    pix = gray.load()
+    labels = [[0] * w for _ in range(h)]
+    label = 0
+
+    for i in range(h):
+        for j in range(w):
+            # Pixel întunecat (obiect) și neetichetat
+            if pix[j, i] < 128 and labels[i][j] == 0:
+                label += 1
+                labels[i][j] = label
+                queue = deque([(i, j)])
+
+                while queue:
+                    qi, qj = queue.popleft()
+                    for di in range(-1, 2):
+                        for dj in range(-1, 2):
+                            ni, nj = qi + di, qj + dj
+                            if 0 <= ni < h and 0 <= nj < w:
+                                if pix[nj, ni] < 128 and labels[ni][nj] == 0:
+                                    labels[ni][nj] = label
+                                    queue.append((ni, nj))
+
+    return labels, label
+
+
+def generate_label_colors(num_labels):
+    """
+    Generează culori distincte pentru fiecare etichetă.
+    Folosește metoda unghiului de aur (137.508°) pentru distribuție uniformă în spațiul HSV.
+    """
+    colors = {0: (255, 255, 255)}  # Fundal = alb
+    for lbl in range(1, num_labels + 1):
+        hue = (lbl * 137.508) % 360
+        h60 = hue / 60.0
+        i = int(h60) % 6
+        f = h60 - int(h60)
+        q, t = int((1 - f) * 255), int(f * 255)
+        palette = [
+            (255, t, 0), (q, 255, 0), (0, 255, t),
+            (0, q, 255), (t, 0, 255), (255, 0, q)
+        ]
+        colors[lbl] = palette[i]
+    return colors
+
+
+def render_labeled_image(labels, colors, w, h):
+    """Redă imaginea colorată pe baza matricei de etichete."""
+    result = Image.new("RGB", (w, h), (255, 255, 255))
+    pix = result.load()
+    for i in range(h):
+        for j in range(w):
+            pix[j, i] = colors.get(labels[i][j], (255, 255, 255))
+    return result
+
+
+def extract_object_mask(labels, target_label, w, h):
+    """
+    Extrage masca unui obiect specific pe baza etichetei sale.
+    Returnează imaginea mască (alb/negru) și lista de coordonate.
+    """
+    mask_img = Image.new("RGB", (w, h), (255, 255, 255))
+    pix = mask_img.load()
+    coords = []
+    for i in range(h):
+        for j in range(w):
+            if labels[i][j] == target_label:
+                pix[j, i] = (0, 0, 0)  # Obiectul selectat = negru
+                coords.append((j, i))
+    return mask_img, coords
+
+
+def compute_sobel_orientation(mask_img):
+    """
+    Calculează direcția de alungire a obiectului folosind operatorul Sobel.
+    Găsește pixelul cu magnitudinea maximă și returnează unghiul gradientului.
+    """
+    gray = mask_img.convert("L")
+    w, h = gray.size
+    pix = gray.load()
+    max_mag = 0.0
+    orientation = 0.0
+    peak_x = peak_y = 0
+
+    for y in range(1, h - 1):
+        for x in range(1, w - 1):
+            # Gradienții Sobel pe X și Y
+            gx = (pix[x+1, y-1] + 2*pix[x+1, y] + pix[x+1, y+1]
+                  - pix[x-1, y-1] - 2*pix[x-1, y] - pix[x-1, y+1])
+            gy = (pix[x-1, y+1] + 2*pix[x, y+1] + pix[x+1, y+1]
+                  - pix[x-1, y-1] - 2*pix[x, y-1] - pix[x+1, y-1])
+            mag = math.sqrt(gx * gx + gy * gy)
+            if mag > max_mag:
+                max_mag = mag
+                orientation = math.atan2(gy, gx)
+                peak_x, peak_y = x, y
+
+    return math.degrees(orientation), max_mag, peak_x, peak_y

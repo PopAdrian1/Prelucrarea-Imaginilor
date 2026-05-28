@@ -1,6 +1,4 @@
 """
-transformari.py — Transformări și algoritmi avansați de procesare imagini
-=========================================================================
 Conține:
   • Transformata Fourier 2D (numpy permis)
   • Floyd-Steinberg dithering
@@ -15,13 +13,11 @@ import math
 from PIL import Image
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  TRANSFORMATA FOURIER 2D — Lab 5
-# ══════════════════════════════════════════════════════════════════════════════
+#  TRANSFORMATA FOURIER
 
 def transformata_fourier(img):
     """
-    Aplică Transformata Fourier Discretă 2D (FFT2) pe o imagine grayscale.
+    Aplică Transformata Fourier Discretă pe o imagine grayscale.
     Pași:
       1. Convertim imaginea la grayscale
       2. Aplicăm np.fft.fft2 (FFT pe 2 dimensiuni)
@@ -55,13 +51,12 @@ def transformata_fourier(img):
     return Image.fromarray(magnitude).convert("RGB")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  FLOYD-STEINBERG DITHERING — Lab 5 (Extra)
-# ══════════════════════════════════════════════════════════════════════════════
+
+#  FLOYD-STEINBERG DITHERING
 
 def floyd_steinberg(img, palette=None):
     """
-    Algoritm Floyd-Steinberg de dithering cu difuzarea erorii de cuantificare.
+    Algoritm Floyd-Steinberg cu difuzarea erorii de cuantificare.
     Reduce numărul de culori din imagine la paleta dată, distribuind eroarea
     la pixelii vecini conform matricei:
               X   7/16
@@ -71,16 +66,6 @@ def floyd_steinberg(img, palette=None):
         img     — imagine PIL.Image sursă
         palette — listă de tupluri (R,G,B); implicit alb-negru [(0,0,0),(255,255,255)]
 
-    Pseudocod (conform laboratorului):
-      pentru fiecare pixel (i,j) de la stânga-sus la dreapta-jos:
-        pixel_vechi = img[i,j]
-        pixel_nou   = culoarea cea mai apropiată din paletă
-        img[i,j]    = pixel_nou
-        eroare      = pixel_vechi - pixel_nou
-        img[i, j+1]   += eroare * 7/16   (dreapta)
-        img[i+1, j-1] += eroare * 3/16   (jos-stânga)
-        img[i+1, j]   += eroare * 5/16   (jos)
-        img[i+1, j+1] += eroare * 1/16   (jos-dreapta)
     """
     if palette is None:
         palette = [(0, 0, 0), (255, 255, 255)]
@@ -140,9 +125,8 @@ def floyd_steinberg(img, palette=None):
     return result
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 #  METODA CANNY — Lab 7
-# ══════════════════════════════════════════════════════════════════════════════
 
 def _gaussian_blur_canny(img, size=3):
     """
@@ -278,7 +262,7 @@ def _hysteresis_thresholding(suppressed, w, h, low=50, high=150):
 
 def canny_edge_detection(img, low=50, high=150, iterations=1):
     """
-    Detectarea marginilor prin metoda Canny (fără OpenCV).
+    Detectarea marginilor prin metoda Canny.
     Pași:
       1. Conversie la grayscale
       2. Blur Gaussian 3×3 (reducere zgomot)
@@ -312,9 +296,7 @@ def canny_edge_detection(img, low=50, high=150, iterations=1):
     return result
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  COMPRESIE LZW — Lab 8
-# ══════════════════════════════════════════════════════════════════════════════
 
 def lzw_compress(data):
     """
@@ -322,18 +304,6 @@ def lzw_compress(data):
     Inițializăm dicționarul cu toate simbolurile posibile (0-255).
     Algoritmul identifică șiruri repetitive și le înlocuiește cu coduri.
 
-    Pseudocod (conform laboratorului):
-      Inițializează dicționar cu simboluri individuale (0..255)
-      P = primul simbol din intrare
-      WHILE nu s-a terminat intrarea:
-        C = următorul simbol
-        DACA P+C există în dicționar: P = P+C
-        ALTFEL: outputează codul lui P
-                adaugă P+C în dicționar
-                P = C
-      outputează codul lui P
-
-    Returnează lista de coduri (int).
     """
     # Inițializăm dicționarul cu simbolurile de bază (0-255)
     dict_size = 256
@@ -364,22 +334,6 @@ def lzw_decompress(codes):
     """
     Decompresie LZW dintr-o listă de coduri întregi.
     Reconstruiește secvența originală de bytes.
-
-    Pseudocod (conform laboratorului):
-      Inițializează dicționar invers (cod -> șir)
-      OLD = primul cod; outputează traducerea lui OLD
-      WHILE nu s-a terminat intrarea:
-        NEW = următorul cod
-        DACA NEW nu e în dicționar:
-          S = traducerea lui OLD + primul caracter al traducerii lui OLD
-        ALTFEL:
-          S = traducerea lui NEW
-        outputează S
-        C = primul caracter din S
-        adaugă (OLD + C) în dicționar
-        OLD = NEW
-
-    Returnează bytes cu datele decomprimate.
     """
     # Inițializăm dicționarul invers
     dict_size = 256
@@ -437,9 +391,8 @@ def decompress_image_lzw(codes, w, h):
     return img.convert("RGB")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  CODIFICARE HUFFMAN — Lab 8 (Bonus)
-# ══════════════════════════════════════════════════════════════════════════════
+
+#  CODIFICARE HUFFMAN
 
 class _HuffmanNode:
     """Nod pentru arborele Huffman."""
@@ -529,21 +482,15 @@ def huffman_decode(codes, bit_string, w, h):
     return img.convert("RGB")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  CODIFICARE RLE/RLC — Lab 8 (Bonus)
-# ══════════════════════════════════════════════════════════════════════════════
+
+#  CODIFICARE RLE/RLC
+
 
 def rle_encode(img):
     """
     Codificare RLE (Run-Length Encoding) pe o imagine grayscale.
     Comprimă secvențe de pixeli identici ca (valoare, număr_repetări).
     Eficientă pentru imagini cu zone uniforme (ex: imagini binare).
-
-    Pseudocod:
-      pentru fiecare pixel din secvența plată:
-        dacă pixel == pixel_anterior: incrementăm contorul
-        altfel: outputăm (pixel_anterior, contor); resetăm contorul
-      outputăm ultima pereche
 
     Returnează (perechi_rle, width, height)
     unde perechi_rle = [(valoare, count), ...]

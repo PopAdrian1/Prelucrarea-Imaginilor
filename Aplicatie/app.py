@@ -1,6 +1,4 @@
 """
-app.py — Advanced Bitmap Editor
-================================
 Aplicație tkinter pentru procesarea imaginilor cu design dark/profesional.
 
 Meniuri disponibile:
@@ -21,7 +19,6 @@ Structura UI:
   - Canvas central (imaginea curentă)
   - Status bar jos
 
-Autori: refactorizat complet din structura originală
 """
 
 import tkinter as tk
@@ -33,7 +30,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 import math
-from collections import deque
 
 # Importăm modulele de filtre, transformări și analiză
 from filtre import *
@@ -41,9 +37,7 @@ from transformari import *
 from analiza import *
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  HELPER: Construire dropdown personalizat
-# ══════════════════════════════════════════════════════════════════════════════
 
 def make_dropdown_button(parent, root, label, color, items):
     """
@@ -117,275 +111,13 @@ def make_dropdown_button(parent, root, label, color, items):
     return btn
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  FUNCȚII AJUTĂTOARE: Lab 4 — Etichetare BFS + Sobel
-# ══════════════════════════════════════════════════════════════════════════════
 
-def label_connected_components(img):
-    """
-    Etichetează componentele conexe ale obiectelor din imagine (BFS/flood-fill).
-
-    Algoritmul:
-      1. Convertim imaginea la grayscale
-      2. Parcurgem fiecare pixel; dacă e întunecat (< 128) și neetichetat:
-         - Pornim BFS din acel pixel
-         - Propagăm eticheta la toți vecinii 8-conectați întunecați
-      3. Rezultat: matrice labels[y][x] = numărul obiectului (0 = fundal)
-
-    Returnează (labels, num_labels).
-    """
-    gray = img.convert("L")
-    w, h = gray.size
-    pix = gray.load()
-    labels = [[0] * w for _ in range(h)]
-    label = 0
-
-    for i in range(h):
-        for j in range(w):
-            # Pixel întunecat (obiect) și neetichetat
-            if pix[j, i] < 128 and labels[i][j] == 0:
-                label += 1
-                labels[i][j] = label
-                queue = deque([(i, j)])
-
-                # BFS: propagăm eticheta la toți vecinii 8-conectați
-                while queue:
-                    qi, qj = queue.popleft()
-                    for di in range(-1, 2):
-                        for dj in range(-1, 2):
-                            ni, nj = qi + di, qj + dj
-                            if 0 <= ni < h and 0 <= nj < w:
-                                if pix[nj, ni] < 128 and labels[ni][nj] == 0:
-                                    labels[ni][nj] = label
-                                    queue.append((ni, nj))
-
-    return labels, label
-
-
-def generate_label_colors(num_labels):
-    """
-    Generează culori distincte pentru fiecare etichetă.
-    Folosește metoda unghiului de aur (137.508°) pentru distribuție uniformă în spațiul HSV.
-    """
-    colors = {0: (255, 255, 255)}  # Fundal = alb
-    for lbl in range(1, num_labels + 1):
-        hue = (lbl * 137.508) % 360
-        h60 = hue / 60.0
-        i = int(h60) % 6
-        f = h60 - int(h60)
-        q, t = int((1 - f) * 255), int(f * 255)
-        palette = [
-            (255, t, 0), (q, 255, 0), (0, 255, t),
-            (0, q, 255), (t, 0, 255), (255, 0, q)
-        ]
-        colors[lbl] = palette[i]
-    return colors
-
-
-def render_labeled_image(labels, colors, w, h):
-    """Redă imaginea colorată pe baza matricei de etichete."""
-    result = Image.new("RGB", (w, h), (255, 255, 255))
-    pix = result.load()
-    for i in range(h):
-        for j in range(w):
-            pix[j, i] = colors.get(labels[i][j], (255, 255, 255))
-    return result
-
-
-def extract_object_mask(labels, target_label, w, h):
-    """
-    Extrage masca unui obiect specific pe baza etichetei sale.
-    Returnează imaginea mască (alb/negru) și lista de coordonate.
-    """
-    mask_img = Image.new("RGB", (w, h), (255, 255, 255))
-    pix = mask_img.load()
-    coords = []
-    for i in range(h):
-        for j in range(w):
-            if labels[i][j] == target_label:
-                pix[j, i] = (0, 0, 0)  # Obiectul selectat = negru
-                coords.append((j, i))
-    return mask_img, coords
-
-
-def compute_sobel_orientation(mask_img):
-    """
-    Calculează direcția de alungire a obiectului folosind operatorul Sobel.
-    Găsește pixelul cu magnitudinea maximă și returnează unghiul gradientului.
-    """
-    gray = mask_img.convert("L")
-    w, h = gray.size
-    pix = gray.load()
-    max_mag = 0.0
-    orientation = 0.0
-    peak_x = peak_y = 0
-
-    for y in range(1, h - 1):
-        for x in range(1, w - 1):
-            # Gradienții Sobel pe X și Y
-            gx = (pix[x+1, y-1] + 2*pix[x+1, y] + pix[x+1, y+1]
-                  - pix[x-1, y-1] - 2*pix[x-1, y] - pix[x-1, y+1])
-            gy = (pix[x-1, y+1] + 2*pix[x, y+1] + pix[x+1, y+1]
-                  - pix[x-1, y-1] - 2*pix[x, y-1] - pix[x+1, y-1])
-            mag = math.sqrt(gx * gx + gy * gy)
-            if mag > max_mag:
-                max_mag = mag
-                orientation = math.atan2(gy, gx)
-                peak_x, peak_y = x, y
-
-    return math.degrees(orientation), max_mag, peak_x, peak_y
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  FUNCȚII: Lab 5 — Egalizare histogramă + Morfologie
-# ══════════════════════════════════════════════════════════════════════════════
-
-def equalize_histogram(img):
-    """
-    Egalizează histograma imaginii pentru îmbunătățirea contrastului.
-
-    Algoritmul:
-      1. Calculăm histograma h[i] pentru fiecare nivel de gri i ∈ [0,255]
-      2. Calculăm histograma cumulativă hc[i]
-      3. Transformarea: T(i) = (hc[i] - hc[0]) * 255 / (N - hc[0])
-         unde N = numărul total de pixeli
-    """
-    gray = img.convert("L")
-    w, h = gray.size
-    pix = gray.load()
-    N = w * h
-
-    # Calculăm histograma
-    hist = [0] * 256
-    for y in range(h):
-        for x in range(w):
-            hist[pix[x, y]] += 1
-
-    # Histograma cumulativă
-    hc = [0] * 256
-    hc[0] = hist[0]
-    for i in range(1, 256):
-        hc[i] = hc[i-1] + hist[i]
-
-    # Transformarea de egalizare
-    hc0 = hc[0]
-    denom = max(N - hc0, 1)
-    T = [int(round((hc[i] - hc0) * 255 / denom)) for i in range(256)]
-
-    # Aplicăm transformarea
-    result = Image.new("L", (w, h))
-    rpix = result.load()
-    for y in range(h):
-        for x in range(w):
-            rpix[x, y] = T[pix[x, y]]
-    return result.convert("RGB")
-
-
-def _to_binary(img, threshold=128):
-    """Convertește imaginea la matrice binară (1=obiect negru, 0=fundal alb)."""
-    gray = img.convert("L")
-    w, h = gray.size
-    pix = gray.load()
-    return [[1 if pix[x, y] < threshold else 0
-             for x in range(w)] for y in range(h)], w, h
-
-
-def _from_binary(matrix, w, h):
-    """Reconstruiește imaginea PIL dintr-o matrice binară."""
-    result = Image.new("L", (w, h), 255)
-    pix = result.load()
-    for y in range(h):
-        for x in range(w):
-            if matrix[y][x] == 1:
-                pix[x, y] = 0
-    return result.convert("RGB")
-
-
-def dilate(img, kernel_size=3, iterations=1):
-    """
-    Operația de dilatare morfologică.
-    Extinde obiectele (pixeli negri) cu kernel_size x kernel_size pe iterations iterații.
-    Un pixel devine obiect dacă cel puțin un vecin din kernelul structural e obiect.
-    """
-    matrix, w, h = _to_binary(img)
-    half = kernel_size // 2
-    for _ in range(iterations):
-        new_m = [[0] * w for _ in range(h)]
-        for y in range(h):
-            for x in range(w):
-                found = False
-                for ky in range(-half, half + 1):
-                    for kx in range(-half, half + 1):
-                        ny, nx = y + ky, x + kx
-                        if 0 <= ny < h and 0 <= nx < w and matrix[ny][nx] == 1:
-                            found = True
-                            break
-                    if found:
-                        break
-                new_m[y][x] = 1 if found else 0
-        matrix = new_m
-    return _from_binary(matrix, w, h)
-
-
-def erode(img, kernel_size=3, iterations=1):
-    """
-    Operația de eroziune morfologică.
-    Subțiază obiectele (pixeli negri). Un pixel rămâne obiect doar dacă
-    toți vecinii din kernelul structural sunt și ei obiect.
-    """
-    matrix, w, h = _to_binary(img)
-    half = kernel_size // 2
-    for _ in range(iterations):
-        new_m = [[0] * w for _ in range(h)]
-        for y in range(h):
-            for x in range(w):
-                if matrix[y][x] == 0:
-                    continue
-                all_one = True
-                for ky in range(-half, half + 1):
-                    for kx in range(-half, half + 1):
-                        ny, nx = y + ky, x + kx
-                        if not (0 <= ny < h and 0 <= nx < w) or matrix[ny][nx] == 0:
-                            all_one = False
-                            break
-                    if not all_one:
-                        break
-                new_m[y][x] = 1 if all_one else 0
-        matrix = new_m
-    return _from_binary(matrix, w, h)
-
-
-def opening(img, kernel_size=3, iterations=1):
-    """
-    Deschidere morfologică = Eroziune urmată de Dilatare.
-    Elimină zgomotul mic (obiecte mici) fără a modifica semnificativ forma.
-    """
-    result = img
-    for _ in range(iterations):
-        result = erode(result, kernel_size, 1)
-        result = dilate(result, kernel_size, 1)
-    return result
-
-
-def closing(img, kernel_size=3, iterations=1):
-    """
-    Închidere morfologică = Dilatare urmată de Eroziune.
-    Umple găurile mici din obiecte fără a modifica semnificativ forma.
-    """
-    result = img
-    for _ in range(iterations):
-        result = dilate(result, kernel_size, 1)
-        result = erode(result, kernel_size, 1)
-    return result
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 #  CLASA PRINCIPALĂ — AdvancedBitmapEditor
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 class AdvancedBitmapEditor:
     """
-    Editor avansat de imagini bitmap cu interfață dark/profesională.
+    Editor avansat de imagini bitmap cu interfață dark.
 
     Stare internă:
         original_img  — imaginea de bază (după ultimul Salveaza)
@@ -398,7 +130,7 @@ class AdvancedBitmapEditor:
         vars          — dicționar de tk.Var pentru toți parametrii ajustabili
     """
 
-    # Paleta implicită Floyd-Steinberg
+    # Paleta implicită
     FS_PALETTE = [
         (0, 0, 0), (255, 255, 255),
         (255, 0, 0), (0, 255, 0), (0, 0, 255),
@@ -467,9 +199,9 @@ class AdvancedBitmapEditor:
 
         self._build_ui()
 
-    # ─────────────────────────────────────────────────────────────────────────
+
     #  CONSTRUIRE INTERFAȚĂ
-    # ─────────────────────────────────────────────────────────────────────────
+   
 
     def _build_ui(self):
         """Construiește întreaga interfață: top bar, sidebar, canvas, status bar."""
@@ -514,9 +246,16 @@ class AdvancedBitmapEditor:
             ("🔽  Minim 3×3",                  lambda: self.preview_filter("minim")),
             ("🔼  Maxim 3×3",                  lambda: self.preview_filter("maxim")),
             ("✨  Accentuare",                 lambda: self.preview_filter("accentuare")),
+            None,
             ("🔲  Laplacian",                  lambda: self.preview_filter("laplacian")),
             ("🌫  Eliminare zgomot Gaussian",           lambda: self.preview_filter("gaussian_denoise")),
             ("🔗  LoG (Laplacian of Gaussian)",lambda: self.preview_filter("log")),
+            None,
+            ("⬛  Dilatare",                   lambda: self._apply_lab5("dilate")),
+            ("⬜  Eroziune",                   lambda: self._apply_lab5("erode")),
+            None,
+            ("🔓  Deschidere (Ero→Dil)",        lambda: self._apply_lab5("opening")),
+            ("🔒  Închidere (Dil→Ero)",         lambda: self._apply_lab5("closing")),
         ])
 
 
@@ -562,27 +301,17 @@ class AdvancedBitmapEditor:
             ("🧮  Matrice covarianță",          self.show_covariance),
             ("📉  Proiecții H/V",               self.show_projections),
             None,
+            ("🏷  Etichetare",              self._apply_labeling),
+            ("🎯  Selectare obiect",            self._select_labeled_object),
+            ("📐  Direcție Sobel",              self._apply_sobel),
+            None,
             ("📶  SNR (imagine curentă)",       self.show_snr_single),
             ("📶  SNR (original vs. display)",  self.show_snr_two),
             None,
             ("📋  Raport complet",              self.show_full_report),
         ])
 
-        # ── Meniu Lab 4 ──────────────────────────────────────────────────────
-        make_dropdown_button(top_bar, self.root, "🏷  Lab 4 ▾", "#3a2a1a", [
-            ("🏷  Etichetare BFS",              self._apply_labeling),
-            ("🎯  Selectare obiect",            self._select_labeled_object),
-            ("📐  Direcție Sobel",              self._apply_sobel),
-        ])
 
-        # ── Meniu Lab 5 Morfologie ────────────────────────────────────────────
-        make_dropdown_button(top_bar, self.root, "🔬 Lab 5 ▾", "#3a1a1a", [
-            ("⬛  Dilatare",                   lambda: self._apply_lab5("dilate")),
-            ("⬜  Eroziune",                   lambda: self._apply_lab5("erode")),
-            None,
-            ("🔓  Deschidere (Ero→Dil)",        lambda: self._apply_lab5("opening")),
-            ("🔒  Închidere (Dil→Ero)",         lambda: self._apply_lab5("closing")),
-        ])
 
         # ── Corp principal ────────────────────────────────────────────────────
         main = tk.Frame(self.root, bg="#0d0d14")
