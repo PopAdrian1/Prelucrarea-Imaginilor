@@ -437,7 +437,7 @@ def filtru_gaussian_noise_removal(img):
 
 
 
-#  FILTRE DETECȚIE CONTUR 
+#  FILTRE DETECȚIE CONTUR
 
 
 # Definim kernelele de detecție a contururilor conform laboratorului
@@ -471,6 +471,7 @@ def _apply_edge_kernel(img, kernel):
                     sum_r += coef * r
                     sum_g += coef * g
                     sum_b += coef * b
+                    
             # Suma canalelor (ca în Java original)
             total = abs(sum_r) + abs(sum_g) + abs(sum_b)
             val = max(0, min(255, int(total / 3)))
