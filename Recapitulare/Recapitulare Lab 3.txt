@@ -1,0 +1,53 @@
+Recapitulare Lab 3
+
+RGB - YCbCr:
+
+Algoritm RGB_la_YCbCr(imagine_RGB)
+    Pentru i de la 0 pana la Inaltime - 1 executa
+        Pentru j de la 0 pana la Latime - 1 executa
+            R <- citeste_Rosu(imagine_RGB, i, j)
+            G <- citeste_Verde(imagine_RGB, i, j)
+            B <- citeste_Albastru(imagine_RGB, i, j)
+            
+            // Formulele din standardul JFIF (JPEG)
+            Y  <-  0.299 * R + 0.587 * G + 0.114 * B
+            Cb <- -0.1687 * R - 0.3313 * G + 0.498 * B + 128
+            Cr <-  0.498 * R - 0.4187 * G - 0.0813 * B + 128
+            
+            // Salvam pixelul transformat
+            scrie_pixel(imagine_YCbCr, i, j, Y, Cb, Cr)
+        SfarsitPentru
+    SfarsitPentru
+SfarsitAlgoritm
+
+se poate esantiona ( scadea marimea imaginii la 1:2 ) deoarece ochiul uman nu observa diferenta 
+
+Binarizare:
+
+Algoritm Binarizare_Imagine(imagine_RGB, prag)
+    // prag: valoare intre 0 si 255 (ex: 128)
+    Pentru i de la 0 pana la Inaltime - 1 executa
+        Pentru j de la 0 pana la Latime - 1 executa
+            R <- citeste_Rosu(imagine_RGB, i, j)
+            G <- citeste_Verde(imagine_RGB, i, j)
+            B <- citeste_Albastru(imagine_RGB, i, j)
+            
+            // Pasul 1: Transformam pixelul in gri (folosind metoda optima)
+            Gri <- 0.299 * R + 0.587 * G + 0.114 * B
+            
+            // Pasul 2: Decizia de binarizare
+            Daca Gri < prag atunci
+                Valoare_Finala <- 0    // Negru
+            Altfel
+                Valoare_Finala <- 255  // Alb
+            SfarsitDaca
+            
+            scrie_pixel(imagine_Binarizata, i, j, Valoare_Finala, Valoare_Finala, Valoare_Finala)
+        SfarsitPentru
+    SfarsitPentru
+SfarsitAlgoritm
+
+
+- alegem un prag ( de obicei 128 ).
+- pixel>128 => alb
+- pixel<128 => negru

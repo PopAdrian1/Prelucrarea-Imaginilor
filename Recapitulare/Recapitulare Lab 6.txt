@@ -1,0 +1,103 @@
+Recapitulare Lab 6
+
+1. Histograma
+Ce este: Un vector cu 256 de poziții care numără de câte ori apare fiecare nivel de gri (0–255) în imagine.Iată pseudocodul explicat pentru fiecare algoritm. Voi face câte o diagramă vizuală pentru fiecare.
+
+Egalizare histograma:
+
+// PASUL 1: numara cate pixeli au fiecare nivel de gri
+pentru i = 0 pana la 255:
+    h[i] = 0                        // initializare cu zero
+
+pentru fiecare pixel (y, x) din imagine:
+    nivel = imagine[y][x]           // citim valoarea pixelului (0-255)
+    h[nivel] = h[nivel] + 1         // il "bifam" in histograma
+
+// PASUL 2: suma cumulativa (cati pixeli au valoare <= i)
+hc[0] = h[0]
+pentru i = 1 pana la 255:
+    hc[i] = hc[i-1] + h[i]         // adunam progresiv
+
+// PASUL 3: calculam noul nivel pentru fiecare pixel
+pentru fiecare pixel (y, x):
+    x_vechi = imagine[y][x]
+    nivel_nou = (hc[x_vechi] - hc[0]) * 255 / (W*H - hc[0])
+    imagine[y][x] = nivel_nou       // suprascriem pixelul
+
+
+Ideea cheie: formula din pasul 3 "întinde" nivelele de gri să acopere uniform tot intervalul 0–255, mărind astfel contrastul.
+
+
+
+Cum funcționează kernelul — explicat simplu
+Kernelul este o mică matrice 3×3 de 0 și 1. Centrul (poziția [1][1]) reprezintă pixelul curent pe care îl analizăm. Celelalte poziții cu valoarea 1 spun algoritmului: "uită-te și în direcția asta".
+
+Kernel cruce (+):        Kernel plin 3×3:      Kernel vertical (|):
+  0 1 0                    1 1 1                  0 1 0
+  1 1 1    ← centru        1 1 1    ← centru      0 1 0    ← centru
+  0 1 0                    1 1 1                  0 1 0
+
+Uita-te:                 Uita-te:               Uita-te:
+sus, jos,                in toate               sus si jos
+stanga, dreapta          cele 8 directii        (ignora stanga/dreapta)
+
+
+Efectul diferitelor kerneluri
+Cu kernelul cruce dilatarea extinde obiectul doar pe orizontală și verticală — nu și pe diagonale. Cu kernelul plin extinde în toate 8 direcțiile deodată, deci crește mai mult. Cu kernelul vertical extinde doar în sus și jos — util dacă vrei să "înalți" un obiect fără să-l lărgești.
+
+Eroziunea verifica ca toti vecinii pixelului unui obiect sa fie albi (ca obiectul). Daca nu sunt atunci elimina acel pixe (il face negru)
+
+
+// DILATARE — obiectul creste
+Algoritm Dilatare(imagine, kernel):
+    pentru fiecare pixel (y, x):
+        gasit = Fals
+        
+        // verificam vecinii conform kernelului
+        pentru fiecare (ky, kx) activ din kernel:
+            dy = ky - centru_kernel_y
+            dx = kx - centru_kernel_x
+            
+            daca imagine[y+dy][x+dx] == ALB:
+                gasit = Adevarat  // ajunge cel putin un vecin alb
+        
+        daca gasit:
+            rezultat[y][x] = ALB  // pixelul devine alb
+        altfel:
+            rezultat[y][x] = NEGRU
+
+// EROZIUNE — obiectul se micșoreaza
+Algoritm Eroziune(imagine, kernel):
+    pentru fiecare pixel (y, x):
+        toti_albi = Adevarat
+        
+        pentru fiecare (ky, kx) activ din kernel:
+            dy = ky - centru_kernel_y
+            dx = kx - centru_kernel_x
+            
+            daca imagine[y+dy][x+dx] != ALB:
+                toti_albi = Fals  // gasit un vecin negru
+        
+        daca toti_albi:
+            rezultat[y][x] = ALB  // ramane alb
+        altfel:
+            rezultat[y][x] = NEGRU
+
+// DESCHIDERE = eroziune urmata de dilatare
+// → elimina zgomot mic (puncte albe izolate)
+Deschidere(imagine, kernel, n_iteratii):
+    temp = imagine
+    repeta n_iteratii: temp = Eroziune(temp, kernel)
+    repeta n_iteratii: temp = Dilatare(temp, kernel)
+    returneaza temp
+
+// INCHIDERE = dilatare urmata de eroziune
+// → umple gauri mici in interiorul obiectelor
+Inchidere(imagine, kernel, n_iteratii):
+    temp = imagine
+    repeta n_iteratii: temp = Dilatare(temp, kernel)
+    repeta n_iteratii: temp = Eroziune(temp, kernel)
+    returneaza temp
+
+
+

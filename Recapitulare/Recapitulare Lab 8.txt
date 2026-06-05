@@ -1,0 +1,232 @@
+Recapitulare Lab 8
+
+
+1. FILTRUL LAPLACIAN (Detectarea Marginilor)
+Ce face?
+Detectează marginile din imagine — locurile unde culoarea se schimbă brusc (de la deschis la închis sau invers). Este ca și cum ai folosi un creion pentru a sublinia contururile obiectelor.
+Cum funcționează?
+Algoritmul folosește o mască 3×3 (o grilă mică):
+[-1  -1  -1]
+[-1   8  -1]
+[-1  -1  -1]
+Ideea:
+
+Centrul are valoarea 8 (important)
+Cei 8 pixeli din jur au valoarea -1 (neimportanți)
+Se calculează: (8 × pixelul central) − (suma pixelilor din jur)
+Dacă pixelul central este diferit de cei din jur → rezultat mare → margine detectată!
+
+Pseudocod curat:
+Funcție DetectareMargineLaplacian(imagine):
+    1. Convertește imaginea la tonuri de gri (pentru simplitate)
+    2. Creează o imagine nouă, goală (pentru rezultat)
+    
+    3. Pentru fiecare rând din imagine (de la rând 1 la rând n-1):
+        4. Pentru fiecare coloană din acel rând (de la coloană 1 la coloană m-1):
+            
+            5. Ia o fereastră 3×3 cu pixelul curent la centru
+            6. Calculează suma folosind masca Laplacian:
+               sum = 0
+               sum += (-1) × pixel[sus-stânga]
+               sum += (-1) × pixel[sus]
+               sum += (-1) × pixel[sus-dreapta]
+               sum += (-1) × pixel[stânga]
+               sum += 8 × pixel[centru]      ← cel mai important
+               sum += (-1) × pixel[dreapta]
+               sum += (-1) × pixel[jos-stânga]
+               sum += (-1) × pixel[jos]
+               sum += (-1) × pixel[jos-dreapta]
+            
+            7. Setează pixelul rezultat = sum (poate fi negativ, clampează la 0-255)
+    
+    8. Returnează imaginea cu marginile detectate
+De ce funcționează?
+
+Dacă pixelul central este la o margine: el diferă mult de vecini → calcul mare → va fi alb în rezultat
+Dacă pixelul central este în interior: seamănă cu vecini → calcul mic → va fi negru în rezultat
+
+Exemplu practic:
+Imagine originală (tonuri de gri):
+100   100   100
+100   200   100
+100   100   100
+
+Pixelul central = 200 (mai deschis decât vecini)
+sum = (-1×100) + (-1×100) + (-1×100) + (-1×100) + (8×200) + (-1×100) + (-1×100) + (-1×100) + (-1×100)
+sum = -100 -100 -100 -100 +1600 -100 -100 -100 -100
+sum = 1600 - 800 = 800 → MARGINE DETECTATĂ! (rezultat > 0 și mare)
+
+Dacă era pixel interior (200 vecini iar 200):
+sum = (-1×200) × 8 + (8×200) = -1600 + 1600 = 0 → fără margine
+
+
+
+2. ELIMINAREA ZGOMOTULUI GAUSSIAN
+Ce face?
+Șterge zgomotul (pete aleatoare, pixeli ciudați) din imagine fără a estompa prea mult detaliile. Funcționează prin mediere locală.
+Cum funcționează?
+Pentru fiecare pixel:
+
+Ia pixelii din jur (de obicei într-un pătrat 3×3 sau 5×5)
+Calculează media valorilor din acel pătrat
+Înlocuiește pixelul original cu această medie
+
+Pseudocod curat:
+Funcție EliminareZgomotGaussian(imagine, dimensiuneKernel):
+    // dimensiuneKernel = 3 (pentru pătrat 3×3) sau 5 (pentru 5×5), etc.
+    
+    1. Creează o imagine nouă (rezultat)
+    2. Calculează: jumatateKernel = dimensiuneKernel / 2
+    
+    3. Pentru fiecare rând din imagine:
+        4. Pentru fiecare coloană din imagine:
+            
+            5. Inițializează: sumRoșu = 0, sumVerde = 0, sumAlbastru = 0
+            
+            6. Pentru fiecare pixel din kernel-ul 3×3 centrat pe pixelul curent:
+                // De exemplu, pentru kernel 3×3: iterezi de la -1 la 1
+                
+                7. Iau pixelul din kernel (iau grijă să nu ies din imaginea)
+                8. Extrag componentele R, G, B ale pixelului
+                9. Le adun la sumele respective:
+                   sumRoșu += pixelRoșu
+                   sumVerde += pixelVerde
+                   sumAlbastru += pixelAlbastru
+            
+            10. Calculez media:
+                roșuMedie = sumRoșu / (dimensiuneKernel × dimensiuneKernel)
+                verdeMedie = sumVerde / (dimensiuneKernel × dimensiuneKernel)
+                albastruMedie = sumAlbastru / (dimensiuneKernel × dimensiuneKernel)
+            
+            11. Setez pixelul rezultat cu valorile medii
+    
+    12. Returnez imaginea curățată
+De ce funcționează?
+
+Zgomotul Gaussian: pixeli cu valori aleatorii, foarte diferite de vecini
+Prin mediere: valorile aleatorii se "anulează" reciproc
+Pixelii normali: au valori asemănătoare cu vecinii → media schimbă puțin
+Pixelii cu zgomot: au valori extreme → media le apropie de normal
+
+Exemplu practic:
+Imagine cu zgomot:
+100  150  110
+120  255  105  ← pixelul 255 e zgomot (prea alb)
+95   140  100
+
+Kernel 3×3 centrat pe 255:
+sumRoșu = 100 + 150 + 110 + 120 + 255 + 105 + 95 + 140 + 100 = 1175
+media = 1175 / 9 ≈ 130 (mult mai rezonabil decât 255!)
+
+Pixelul de zgomot devine 130 → imagine mai netedă
+
+
+
+
+3. RAPORTUL SNR (Signal-to-Noise Ratio) — VARIANTA 1
+Ce face?
+Măsoară calitatea unei imagini — cât de mult semnal util (imagine bună) vs zgomot (imagini proaste).
+SNR înalt = imagine bună | SNR mic = imagine rea
+Formula:
+SNR = 10 × log₁₀ ( (medie_semnal)² / (medie_zgomot)² ) [în decibeli]
+Pseudocod curat:
+Funcție CalculareRaportSNR_V1(imagine):
+    // Varianta 1: fără comparație cu altă imagine
+    
+    1. Inițializează: sumSemnal = 0, sumZgomot = 0
+    
+    2. Pentru fiecare pixel din imagine:
+        
+        3. Extrage componenta ROȘIE a pixelului (putem folosi orice canal: R, G sau B)
+           semnal = valoareaRoșie
+        
+        4. Calculez zgomotul ca diferență până la valoarea maximă (255):
+           zgomot = |255 - semnal|
+           // Ideea: dacă e 100, zgomotul conceptual e 255-100=155
+           // dacă e 255, zgomotul e 255-255=0 (perfect)
+        
+        5. Adun la totaluri:
+           sumSemnal += semnal
+           sumZgomot += zgomot
+    
+    6. Calculez mediile:
+       mediaS = sumSemnal / (latime × inaltime)
+       mediaZ = sumZgomot / (latime × inaltime)
+    
+    7. Calculez SNR folosind formula logaritmică:
+       SNR = 10 × log₁₀( (mediaS²) / (mediaZ²) )
+    
+    8. Returnez SNR (în decibeli)
+De ce funcționează?
+
+Semnal = pixelii actuali ai imaginii
+Zgomot = cât de departe sunt de "perfect" (255 = alb perfect)
+Raportul = compară puterea ambilor
+
+Exemplu:
+Imagine cu pixeli: 100, 150, 200, 220
+sumSemnal = 100 + 150 + 200 + 220 = 670
+mediaS = 670 / 4 = 167.5
+
+sumZgomot = 155 + 105 + 55 + 35 = 350
+mediaZ = 350 / 4 = 87.5
+
+SNR = 10 × log₁₀(167.5² / 87.5²) = 10 × log₁₀(3.67) ≈ 5.6 dB
+
+4. RAPORTUL SNR — VARIANTA 2 (Cu Două Imagini)
+Ce face?
+Compară două imagini: una originală și una procesată. Măsoară cât de mult s-a distorsionat imaginea.
+Pseudocod curat:
+Funcție CalculareRaportSNR_V2(imaginea1, imaginea2):
+    // Varianta 2: compară două imagini (originală vs procesată)
+    
+    1. Inițializează: sumSemnal = 0, sumZgomot = 0
+    
+    2. Pentru fiecare pixel la poziția (x, y):
+        
+        3. Extrage pixelul din imagine1 și imagine2
+           culoare1 = RGB-ul pixelului din imagine1
+           culoare2 = RGB-ul pixelului din imagine2
+        
+        4. Calculez diferența (asta e "semnalul" — schimbarea):
+           semnal = |culoare1 - culoare2|
+           // Cât de mult s-a modificat pixelul?
+        
+        5. Calculez "zgomotul" ca valoarea inițială a pixelului original:
+           zgomot = |culoare1|
+           // Cât de mare era pixelul original?
+        
+        6. Adun la totaluri:
+           sumSemnal += semnal
+           sumZgomot += zgomot
+    
+    7. Calculez mediile:
+       mediaS = sumSemnal / (latime × inaltime)
+       mediaZ = sumZgomot / (latime × inaltime)
+    
+    8. Calculez SNR:
+       SNR = 10 × log₁₀( (mediaS²) / (mediaZ²) )
+    
+    9. Returnez SNR
+De ce funcționează?
+
+Semnal = diferența dintre original și procesată = câtă distorsiune am introdus?
+Zgomot = imaginea originală = "puterea" semnalului original
+SNR înalt = puțină distorsiune relativ la semnal = procesare bună
+SNR mic = multă distorsiune = procesare rea
+
+Exemplu:
+Imagine originală: pixel = 200
+După filtrare: pixel = 195
+
+semnal = |200 - 195| = 5 (mică schimbare = bine!)
+zgomot = |200| = 200 (semnalul original e 200)
+
+SNR = 10 × log₁₀(5² / 200²) = 10 × log₁₀(25 / 40000) ≈ -22 dB
+(Negativ = imagine distorsionată)
+
+
+
+
+
+

@@ -1,0 +1,148 @@
+Recapitulare Lab 5
+
+
+1. Etichetarea Componentelor Conexe & Colorarea (Pe înțeles)
+Imaginează-ți că ai o pagină albă pe care ai desenat 3 cercuri negre separate. Pentru calculator, toate sunt doar „pixeli negri”. El nu știe unde se termină primul cerc și unde începe al doilea.
+
+Etichetarea este ca o baghetă magică: parcurge imaginea și îi dă primului cerc eticheta 1 (toți pixelii lui devin 1), celui de-al doilea eticheta 2 și așa mai departe. Fundalul rămâne 0.
+
+
+Algoritm Etichetare_Componente_Conexe_BFS(imagine_binara)
+    // Pasul 1: Inițializăm o matrice de etichete cu 0 (înseamnă că inițial totul este nevizitat)
+    matrice_etichete <- Matrice_Goala(Inaltime, Latime, valoare_initiala = 0)
+    eticheta_curenta <- 0
+    
+    // Pasul 2: Scanăm imaginea pixel cu pixel, linie cu linie
+    Pentru y de la 0 pana la Inaltime - 1 executa
+        Pentru x de la 0 pana la Latime - 1 executa
+            
+            // Verificăm dacă am găsit un pixel de obiect (0) care NU a fost încă etichetat
+            Daca imagine_binara[y][x] == 0 SI matrice_etichete[y][x] == 0 atunci
+                
+                // Am descoperit un obiect nou! Generăm o etichetă nouă (1, 2, 3...)
+                eticheta_curenta <- eticheta_curenta + 1
+                
+                // Cream o coadă goală care va stoca coordonatele pixelilor ce trebuie procesați
+                Coada <- Creeaza_Coada_Goala()
+                
+                // Etichetăm pixelul de start și îl adăugăm în coadă
+                matrice_etichete[y][x] <- eticheta_curenta
+                Adauga_In_Coada(Coada, (y, x))
+                
+                // Pasul 3: Propagăm eticheta în rețeaua de vecini (pata de ulei)
+                Cat_timp Coada NU este goala executa
+                    // Extragem primul pixel din coadă pentru a-i analiza vecinii
+                    pixel_curent <- Extrage_Din_Coada(Coada)
+                    cy <- pixel_curent.y
+                    cx <- pixel_curent.x
+                    
+                    // Verificăm toți cei 8 vecini din jurul pixelului curent (fereastră 3x3)
+                    Pentru k de la -1 pana la 1 executa
+                        Pentru m de la -1 pana la 1 executa
+                            vec_y <- cy + k
+                            vec_x <- cx + m
+                            
+                            // 1. Validare: Asigurăm că nu ieșim din marginile fizice ale imaginii
+                            Daca vec_y >= 0 SI vec_y < Inaltime SI vec_x >= 0 SI vec_x < Latime atunci
+                                
+                                // 2. Condiție: Vecinul este obiect (0) și este încă neetichetat (0)?
+                                Daca imagine_binara[vec_y][vec_x] == 0 SI matrice_etichete[vec_y][vec_x] == 0 atunci
+                                    
+                                    // Îi atribuim aceeași etichetă cu a obiectului din care face parte
+                                    matrice_etichete[vec_y][vec_x] <- eticheta_curenta
+                                    
+                                    // Îl punem în coadă pentru ca ulterior să îi verificăm și lui vecinii
+                                    Adauga_In_Coada(Coada, (vec_y, vec_x))
+                                    
+                                SfarsitDaca
+                            SfarsitDaca
+                            
+                        SfarsitPentru
+                    SfarsitPentru
+                SfarsitCatTimp // Aici coada s-a golit, deci un obiect a fost complet etichetat
+                
+            SfarsitDaca
+            
+        SfarsitPentru
+    SfarsitPentru
+    
+    // La final, matrice_etichete conține obiectele numerotate separat, 
+    // iar eticheta_curenta reprezintă numărul total de obiecte găsite.
+    Returneaza matrice_etichete, eticheta_curenta
+SfarsitAlgoritms
+
+
+
+
+Colorarea pe baza etichetelor: Pentru a putea vedea rezultatul cu ochii noștri (deoarece diferența dintre pixelul 1 și pixelul 2 este invizibilă pe ecran), asociem fiecărui număr de etichetă o culoare RGB unică (ex: 1 = Roșu, 2 = Verde, etc.).
+
+Algoritm Colorare_Obiecte_Etichetate(matrice_etichete, numar_total_etichete)
+    // lățime, înălțime - dimensiunile matricii
+    imagine_RGB <- Creează_Imagine_Noua_RGB(latime, inaltime)
+    
+    // Pasul 1: Generăm o listă/tabel de culori unice pentru fiecare etichetă
+    Tabel_Culori[0] <- (0, 0, 0) // Eticheta 0 reprezintă fundalul (Negru)
+    
+    Pentru e de la 1 pana la numar_total_etichete executa
+        Tabel_Culori[e] <- Generare_Culoare_Aleatorie_RGB() // ex: (R, G, B) intense
+    SfarsitPentru
+    
+    // Pasul 2: Parcurgem matricea și aplicăm culorile
+    Pentru y de la 0 pana la Inaltime - 1 executa
+        Pentru x de la 0 pana la Latime - 1 executa
+            
+            eticheta_curenta <- matrice_etichete[y][x]
+            culoare_pixel <- Tabel_Culori[eticheta_curenta]
+            
+            scrie_pixel_RGB(imagine_RGB, y, x, culoare_pixel)
+            
+        SfarsitPentru
+    SfarsitPentru
+    
+    Returneaza imagine_RGB
+SfarsitAlgoritm
+
+
+2. Direcția de Alungire cu Operatorul Sobel (Pe înțeles)
+Operatorul Sobel este un detector de margini. El folosește două matrice mici (măști/filtre) pentru a calcula cât de brusc se schimbă luminozitatea pe axa X (orizontal) și pe axa Y (vertical).
+
+Cum aflăm orientarea obiectului? Codul tău caută pixelul de pe marginea obiectului unde schimbarea de culoare este cea mai bruscă (magnitudinea maximă). În acel punct critic, unghiul vectorului gradient (Math.atan2(gY, gX)) ne spune direcția perpendiculară pe marginea obiectului. Pentru o formă alungită (cum e dreptunghiul tău rotit), acest gradient maxim ne va indica orientarea generală a formei în spațiu.
+
+
+Algoritm Orientare_Sobel_Obiect_Selectat(imagine_originala, matrice_etichete, eticheta_tinta)
+    Maxim_Magnitudine <- -1
+    Unghi_Final_Grade <- 0.0
+    
+    // Pasul 1: Parcurgem imaginea (evităm marginile absolute pentru a avea vecini 3x3)
+    Pentru y de la 1 pana la Inaltime - 2 executa
+        Pentru x de la 1 pana la Latime - 2 executa
+            
+            // CRITIC: Calculăm și analizăm doar dacă pixelul aparține obiectului selectat!
+            Daca matrice_etichete[y][x] == eticheta_tinta atunci
+                
+                // Aplicăm masca Sobel pe Orizontală (X)
+                Grad_X <- (imagine_originala[y-1][x+1]) + (2 * imagine_originala[y][x+1]) + (imagine_originala[y+1][x+1]) -
+                          (imagine_originala[y-1][x-1]) - (2 * imagine_originala[y][x-1]) - (imagine_originala[y+1][x-1])
+                
+                // Aplicăm masca Sobel pe Verticală (Y)
+                Grad_Y <- (imagine_originala[y+1][x-1]) + (2 * imagine_originala[y+1][x]) + (imagine_originala[y+1][x+1]) -
+                          (imagine_originala[y-1][x-1]) - (2 * imagine_originala[y-1][x]) - (imagine_originala[y-1][x+1])
+                
+                // Calculăm puterea (magnitudinea) marginii în acest punct
+                Magnitudine <- Radacina_Patrata(Grad_X * Grad_X + Grad_Y * Grad_Y)
+                
+                // Căutăm punctul de pe marginea obiectului unde schimbarea e cea mai bruscă
+                Daca Magnitudine > Maxim_Magnitudine atunci
+                    Maxim_Magnitudine <- Magnitudine
+                    
+                    // Calculăm unghiul în radiani și îl convertim în grade
+                    Unghi_Radiani <- Arctangent2(Grad_Y, Grad_X)
+                    Unghi_Final_Grade <- Unghi_Radiani * (180.0 / 3.141592)
+                SfarsitDaca
+                
+            SfarsitDaca
+        SfarsitPentru
+    SfarsitPentru
+    
+    Returneaza Unghi_Final_Grade
+SfarsitAlgoritm

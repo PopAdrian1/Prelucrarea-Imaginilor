@@ -1,0 +1,153 @@
+Recapitulare Lab 7
+
+
+
+
+Filtrul de mediere (mean filter)
+Înlocuiește fiecare pixel cu media celor 9 pixeli din vecinătatea 3×3.
+Efect: imagine mai neted㠗 elimină zgomotul.
+
+
+// Ideea: inlocuieste fiecare pixel cu MEDIA vecinilor sai
+
+pentru fiecare pixel (i, j) din imagine (fara margini):
+    suma_R = 0, suma_G = 0, suma_B = 0
+
+    pentru k = -1, 0, +1:          // parcurgem cele 3 linii ale ferestrei
+        pentru l = -1, 0, +1:      // parcurgem cele 3 coloane
+            pixel_vecin = imagine[i+k][j+l]
+            suma_R += (1/9) * vecin.R   // fiecare vecin contribuie egal
+            suma_G += (1/9) * vecin.G
+            suma_B += (1/9) * vecin.B
+
+    rezultat[i][j] = (suma_R, suma_G, suma_B)
+
+// Suma coeficientilor kernelului = 9 × (1/9) = 1 → luminozitatea nu se schimba
+
+
+Filtrul median
+Ia cei 9 pixeli din vecinătate, îi sortează, și alege elementul din mijloc (poziția 4).
+Efect: elimină zgomotul "sare și piper" fără a blura marginile.
+fără kernel sortare
+
+// Ideea: nu face media — alege valoarea din MIJLOC dupa sortare
+
+pentru fiecare pixel (i, j):
+    sir[0..8] = cei 9 pixeli din vecinatatea 3x3   // colectare
+
+    sorteaza sir[] crescator cu BubbleSort:         // ordonare
+        repeta pana cand nu mai sunt schimbari:
+            pentru m = 0..7:
+                daca sir[m] > sir[m+1]: schimba-i
+
+    rezultat[i][j] = sir[4]   // elementul din mijloc = mediana
+
+// De ce e mai bun decat media?
+// Un pixel alb izolat (zgomot) da media sus pentru toti vecinii.
+// Mediana il ignora — e la capatul sirului sortat, nu la mijloc.
+
+
+
+Filtrul de minim / filtrul de maxim
+Minim: din cei 9 pixeli sortați, alege p[0] (cel mai întunecat).
+Efect: imaginea se întunecă, obiectele se subțiază. Similar cu eroziunea.
+p[0] = minim
+Maxim: din cei 9 pixeli sortați, alege p[8] (cel mai luminos).
+Efect: imaginea se luminează, obiectele se îngroașă. Similar cu dilatarea.
+p[8] = maxim
+
+// Identic cu medianul, schimbi doar CE alegi din sir:
+
+Filtru minim:
+    rezultat[i][j] = sir[0]   // cel mai inchis pixel din vecini
+    // efect: imaginea se intuneca, obiectele se subtiaza
+
+Filtru maxim:
+    rezultat[i][j] = sir[8]   // cel mai deschis pixel din vecini
+    // efect: imaginea se lumineza, obiectele se ingroasa
+
+
+Filtrul de accentuare (sharpening)
+Accentuează marginile și detaliile. Centrul are coef. 1 (pixelul curent), vecinii direcți au −1/4 (scad media vecinilor). Efectul: dacă pixelul e diferit de vecini → diferența e amplificată.
+accentuare margini
+
+// Kernelul:  0  -1/4   0
+//          	   -1/4  1  -1/4
+//                       0  -1/4   0
+
+pentru fiecare pixel (i, j):
+    suma = 0
+    pentru k,l in {-1,0,1}:
+        suma += kernel[k+1][l+1] * vecin[i+k][j+l]
+    // suma = pixel_curent*1 + sus*(-1/4) + jos*(-1/4) + stanga*(-1/4) + dreapta*(-1/4)
+    // = pixelul curent MINUS media vecinilor directi
+
+    nivel_nou = pixel_curent + 0.6 * suma
+    // 0.6 = factor de amplificare (cat de tare accentuezi)
+
+// Daca pixelul e la fel ca vecinii (zona uniforma) → suma ≈ 0 → nu se schimba
+// Daca pixelul e diferit (margine) → suma mare → diferenta amplificata
+
+
+Transformata Fourier — explicat simplu
+
+Fourier transformă imaginea din domeniul spațial (pixeli cu poziții) în domeniul frecvențelor (unde frecvente + unde lente).
+
+// Pasul 1: converti imaginea la grayscale
+pentru fiecare pixel (x, y):
+    gray = 0.299*R + 0.587*G + 0.114*B
+
+// Pasul 2: aplici DFT pe fiecare LINIE
+pentru fiecare linie y:
+    row_result[y] = FFT(linia_y)    // transforma valorile intr-un spectru
+
+// Pasul 3: aplici DFT pe fiecare COLOANA din rezultatul de mai sus
+pentru fiecare coloana x:
+    col_result[x] = FFT(coloana_x)
+
+// Pasul 4: calculezi magnitudinea (cat de puternica e fiecare frecventa)
+magnitude[x][y] = sqrt(real² + imaginar²)
+
+// Pasul 5: normalizezi pentru afisare in 0-255
+color = 255 * magnitude[x][y] / max_magnitude
+Rezultatul arată ca o imagine cu un punct luminos în centru (frecvențe joase = zone uniforme) și puncte mai slabe spre margini (frecvențe înalte = detalii fine și zgomot).
+
+
+
+Floyd-Steinberg Dithering — Explicație simplă
+
+Algoritmul Floyd-Steinberg reduce numărul de culori dintr-o imagine (de ex., din 256 nuanțe de gri la doar 2: alb și negru) fără a pierde prea mult contrast. Cum face asta?
+Ideea principală:
+
+Pentru fiecare pixel, îl compari cu cea mai apropiată culoare disponibilă (alb sau negru)
+Calculezi eroarea — diferența dintre culoarea originală și cea aleasă
+Distribuești acea eroare la pixelii vecini (în jos și la dreapta), cu pondere diferită fiecăruia
+Vecanii "absorb" erorii și apoi ei la rândul lor o distribuie mai departe
+
+Rezultatul: în loc de pete uniforme de culoare, obții un model de patern care simulează tonurile intermediare.
+
+Pseudocod
+Floyd-Steinberg(imagine, colors_disponibile):
+  pentru fiecare rând (top -> bottom):
+    pentru fiecare pixel din rând (left -> right):
+      
+      // 1. Găsește cea mai apropiată culoare
+      pixel_original = imagine[x][y]
+      culoare_noua = cea_mai_apropiata_culoare(pixel_original, colors_disponibile)
+      imagine[x][y] = culoare_noua
+      
+      // 2. Calculează eroarea
+      eroare = pixel_original - culoare_noua
+      
+      // 3. Distribuie eroarea pixelilor vecini
+      //    Pattern: (coloana dreapta, rând jos-stânga, jos, jos-dreapta)
+      imagine[x+1][y]   += eroare * 7/16   // dreapta
+      imagine[x-1][y+1] += eroare * 3/16   // jos-stânga
+      imagine[x][y+1]   += eroare * 5/16   // jos direct
+      imagine[x+1][y+1] += eroare * 1/16   // jos-dreapta
+De ce aceste numere (7/16, 3/16, 5/16, 1/16)?
+
+Sunt ponderi care se adună la 1 (16/16)
+Pixelii mai apropiați primesc mai multă eroare
+Pixelii la dreapta și jos primesc eroare (pentru că-i procesezi de la stânga sus la dreapta jos)
+

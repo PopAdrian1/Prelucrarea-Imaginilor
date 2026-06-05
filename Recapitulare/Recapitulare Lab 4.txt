@@ -1,0 +1,220 @@
+Recapitulare Lab 4
+
+
+HSV 
+
+Hue (Nuanța - H): Exprimate în grade (0^ - 360^). Reprezintă culoarea pură de pe cercul cromatic (ex: 0^ e Roșu, 120^ e Verde, 240^ e Albastru).
+
+Saturation (Saturația - S): Între 0 și 1 (sau 0% - 100%). Reprezintă cât de „pură” sau „ștearsă” este culoarea. 0 înseamnă gri complet (fără culoare), iar 1$înseamnă culoare extrem de vie.
+
+Value (Valoarea / Luminozitatea - V): Între 0 și 1. Reprezintă cât de multă lumină primește pixelul. 0 este negru absolut, iar 1 este luminozitatea maximă a acelei nuanțe.
+
+
+Algoritm Conversie_RGB_la_HSV(imagine)
+    Pentru i de la 0 pana la Inaltime - 1 executa
+        Pentru j de la 0 pana la Latime - 1 executa
+            
+            // Pasul 1: Citire si Normalizare RGB in intervalul [0, 1]
+            r <- citeste_Rosu(imagine, i, j) / 255.0
+            g <- citeste_Verde(imagine, i, j) / 255.0
+            b <- citeste_Albastru(imagine, i, j) / 255.0
+            
+            // Pasul 2: Calculare Maxim, Minim si Chroma (C)
+            M <- Maxim(r, g, b)
+            m <- Minim(r, g, b)
+            C <- M - m
+            
+            // Pasul 3: Calculare Value (V)
+            V <- M
+            
+            // Pasul 4: Calculare Saturation (S)
+            Daca V != 0 atunci
+                S <- C / V
+            Altfel
+                S <- 0
+            SfarsitDaca
+            
+            // Pasul 5: Calculare Hue (H)
+            Daca C != 0 atunci
+                Daca M == r atunci H <- 60 * (g - b) / C
+                Daca M == g atunci H <- 120 + 60 * (b - r) / C
+                Daca M == b atunci H <- 240 + 60 * (r - g) / C
+            Altfel
+                H <- 0 // Imaginea este un ton de gri
+            SfarsitDaca
+            
+            // Corectare unghi negativ pentru Hue
+            Daca H < 0 atunci
+                H <- H + 360
+            SfarsitDaca
+            
+            // Pasul 6: Scalare in intervalul [0, 255] pentru salvare pe 8 biti
+            H_norm <- (H * 255) / 360
+            S_norm <- S * 255
+            V_norm <- V * 255
+            
+            // Salvam rezultatul in imagine
+            scrie_pixel(imagine, i, j, H_norm, S_norm, V_norm)
+            
+        SfarsitPentru
+    SfarsitPentru
+SfarsitAlgoritm
+
+
+
+Histograma:
+
+Algoritm Genereaza_Si_Afiseaza_Histograma(imagine_gri)
+
+    // --- PARTEA 1: Calculul vectorului ---
+    // Initializam un vector cu 256 de zerouri
+    Pentru k de la 0 pana la 255 executa
+        histograma[k] <- 0
+    SfarsitPentru
+    
+    // Parcurgem imaginea si numaram pixelii
+    Pentru i de la 0 pana la Inaltime - 1 executa
+        Pentru j de la 0 pana la Latime - 1 executa
+            valoare_gri <- citeste_Gri(imagine_gri, i, j)
+            histograma[valoare_gri] <- histograma[valoare_gri] + 1
+        SfarsitPentru
+    SfarsitPentru
+    
+    // --- PARTEA 2: Afisarea/Desenarea (fara OpenCV) ---
+    // Cream o imagine noua alba de dimensiune 256x200 unde vom "desena" graficul cu linii negre
+    imagine_grafic <- Creeaza_Imagine_Noua(256, 200, Culoare_Alb)
+    
+    // Gasim valoarea maxima din histograma pentru a scala desenul sa incapa in cei 200 de pixeli inaltime
+    max_frecventa <- Gaseste_Maxim_Vector(histograma)
+    
+    Pentru coloana de la 0 pana la 255 executa
+        // Calculam inaltimea barei din grafic
+        inaltime_bara <- (histograma[coloana] * 190) / max_frecventa
+        
+        // Desenam o linie verticala de la baza imaginii in sus
+        Pentru linie de la (200 - 1) pana la (200 - inaltime_bara) executa cu pasul -1
+            scrie_pixel_gri(imagine_grafic, linie, coloana, Culoare_Negru)
+        SfarsitPentru
+    SfarsitPentru
+    
+    Afiseaza_Pe_Ecran(imagine_grafic)
+SfarsitAlgoritm
+
+
+
+Momentul de ordin 0 (m_{00}): Este pur și simplu numărul total de pixeli albi. Reprezintă Aria sau Masa obiectului.
+
+Momentele de ordin 1 (m_{10} și m_{01}): Ne ajută să găsim Centrul de Masă (Centroidul), adică coordonatele X_c și Y_c ale centrului formei.
+
+Momentele de ordin 2 (Momentele Centrale: mu_{20}, mu_{02}, mu_{11}): Măsoară modul în care este distribuită masa (pixelii) în jurul centrului. Ele ne spun cât de alungit este un obiect și la ce unghi este rotit (esențial pentru dreptunghiul tău rotit din Paint!).
+
+Matricea de covarianță: Este o matrice 2x2 formată din aceste momente de ordin 2 normalizate. Ea descrie matematic forma și orientarea obiectului ca o elipsă.
+
+Algoritm Analiza_Momente_Forma(imagine_binara)
+    // Initializam momentele geometrice
+    m00 <- 0, m10 <- 0, m01 <- 0
+    
+    // --- PASUL 1: Calculam Momentele de Ordin 0 si 1 ---
+    Pentru y de la 0 pana la Inaltime - 1 executa       // y este linia
+        Pentru x de la 0 pana la Latime - 1 executa    // x este coloana
+            
+            Daca citeste_pixel(imagine_binara, y, x) == 255 atunci
+                m00 <- m00 + 1
+                m10 <- m10 + x
+                m01 <- m01 + y
+            SfarsitDaca
+            
+        SfarsitPentru
+    SfarsitPentru
+    
+    // Calculam centrul de masa (Centroidul)
+    Daca m00 == 0 atunci Opreste_Algoritm // Imaginea este complet neagra
+    
+    X_c <- m10 / m00
+    Y_c <- m01 / m00
+    
+    Afiseaza "Centrul de masa (Ordin 1): X =", X_c, "Y =", Y_c
+    
+    // --- PASUL 2: Calculam Momentele Centrale de Ordin 2 ---
+    mu20 <- 0, mu02 <- 0, mu11 <- 0
+    
+    Pentru y de la 0 pana la Inaltime - 1 executa
+        Pentru x de la 0 pana la Latime - 1 executa
+            
+            Daca citeste_pixel(imagine_binara, y, x) == 255 atunci
+                mu20 <- mu20 + (x - X_c) * (x - X_c)
+                mu02 <- mu02 + (y - Y_c) * (y - Y_c)
+                mu11 <- mu11 + (x - X_c) * (y - Y_c)
+            SfarsitDaca
+            
+        SfarsitPentru
+    SfarsitPentru
+    
+    Afiseaza "Momente de Ordin 2: mu20 =", mu20, "mu02 =", mu02, "mu11 =", mu11
+    
+    // --- PASUL 3: Constructia Matricei de Covarianta ---
+    // Elementele matricei se obtin prin impartirea momentelor centrale la m00
+    cov_00 <- mu20 / m00  // Varianta pe X
+    cov_11 <- mu02 / m00  // Varianta pe Y
+    cov_01 <- mu11 / m00  // Covarianta X-Y (daca e diferit de 0, obiectul e ROTIT!)
+    
+    Afiseaza "Matricea de Covarianta este:"
+    Afiseaza "[", cov_00, " , ", cov_01, "]"
+    Afiseaza "[", cov_01, " , ", cov_11, "]"
+    
+    // BONUS DE EXAMEN: Cum afli unghiul de rotatie al dreptunghiului din Paint?
+    Unghi_Radiani <- 0.5 * Calculeaza_Atan2(2 * cov_01, cov_00 - cov_11)
+    Unghi_Grade <- Unghi_Radiani * (180 / 3.1415)
+    Afiseaza "Orientarea obiectului (unghiul):", Unghi_Grade, "grade"
+    
+SfarsitAlgoritm
+
+
+
+
+Proiecții pe Orizontală și pe Verticală:
+
+Proiecția Orizontală: Aduni pixelii pe verticală (coloană cu coloană). Rezultatul este un vector de dimensiune egală cu Lățimea imaginii. Îți arată „profilul” imaginii privit de sus.
+
+
+1 2 3 4
+
+1 2 3 4
+
+1 2 3 4
+
+3 6 9 12
+
+Proiecția Verticală: Aduni pixelii pe orizontală (linie cu linie). Rezultatul este un vector de dimensiune egală cu Înălțimea imaginii.
+
+
+Algoritm Proiectii_Imagine(imagine_binara)
+    // Initializam vectorii de proiectie cu zero
+    // proiectie_orizontala are dimensiunea egală cu Latimea imaginii
+    // proiectie_verticala are dimensiunea egală cu Inaltimea imaginii
+    
+    Pentru x de la 0 pana la Latime - 1 executa proiectie_orizontala[x] <- 0
+    Pentru y de la 0 pana la Inaltime - 1 executa proiectie_verticala[y] <- 0
+    
+    // Calculam proiectiile prin parcurgerea imaginii
+    Pentru y de la 0 pana la Inaltime - 1 executa
+        Pentru x de la 0 pana la Latime - 1 executa
+            
+            Valoare <- citeste_pixel(imagine_binara, y, x)
+            
+            Daca Valoare == 255 atunci  // Daca este pixel din obiect
+                proiectie_orizontala[x] <- proiectie_orizontala[x] + 1  
+                proiectie_verticala[y]  <- proiectie_verticala[y] + 1
+            SfarsitDaca
+            
+        SfarsitPentru
+    SfarsitPentru
+    
+    Returneaza proiectie_orizontala, proiectie_verticala
+SfarsitAlgoritm
+
+
+
+
+
+

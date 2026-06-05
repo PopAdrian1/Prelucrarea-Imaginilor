@@ -1,0 +1,501 @@
+Recapitulare Lab 10
+
+
+1. LAPLACIANUL GAUSSIANULUI (LoG - Laplacian of Gaussian)
+Ce e asta?
+E o combinație de două filtre:
+
+Gaussian = netezire (elimină zgomot)
+Laplacian = detectare margini (găsește schimbări bruste)
+
+Ideea: Mai întâi netezești imaginea (ca să scapi de zgomot), apoi detectezi marginile pe imaginea netezită (mai curat).
+
+Pseudocod simplu:
+Funcție LaplacianulGaussianului(imagine):
+    
+    1. Netezeste imaginea cu Gaussian:
+       imaginaNetezita = ApplicaGaussian(imagine, sigma=1.4)
+    
+    2. Aplica Laplacian pe imaginea netezita:
+       rezultat = ApplicaLaplacian(imaginaNetezita)
+    
+    Returnez rezultat
+
+Pasul 1: Gaussian Filter (Netezire)
+Ce e sigma? Un parametru care controleaza cât de mult netezești.
+
+sigma mic (0.5) = puțină netezire
+sigma mare (2.0) = multă netezire (1.4 e standard)
+
+Formula kernel Gaussian:
+kernel[i][j] = e^(-(i² + j²) / (2 × sigma²))
+Pseudocod Gaussian:
+Funcție ApplicaGaussian(imagine, kernelSize=3, sigma=1.4):
+    
+    1. Creaza kernel gol 3×3
+    2. Calculeaza valorile kernelului:
+       Pentru i = -1 la 1:
+           Pentru j = -1 la 1:
+               kernel[i+1][j+1] = e^(-(i² + j²) / (2 × 1.4²))
+    
+    3. Normalizeaza kernelul (imparte fiecare valoare la suma):
+       suma = suma tuturor valorilor kernelului
+       Pentru fiecare valoare in kernel:
+           valoare = valoare / suma
+    
+    4. Aplica convolutie cu acest kernel:
+       rezultat = Convolutie(imagine, kernel)
+    
+    Returnez rezultat
+Exemplu Gaussian 3×3:
+Kernel Gaussian (inainte de normalizare):
+Cu sigma = 1.4:
+
+  -1     0     1
+   0     1     0   ->  0.0296  0.1147  0.0296
+   1                   0.1147  0.4442  0.1147
+                       0.0296  0.1147  0.0296
+
+Suma = 1.0 (deja normalizat pentru acest exemplu)
+
+Aplica pe imagine:
+Imagine 3×3:
+100  120  110
+80   150  90
+95   110  105
+
+Calculul pe pixelul central [1][1]:
+sum = 100×0.0296 + 120×0.1147 + 110×0.0296 +
+      80×0.1147 + 150×0.4442 + 90×0.1147 +
+      95×0.0296 + 110×0.1147 + 105×0.0296
+
+sum = 2.96 + 13.76 + 3.26 + 9.18 + 66.63 + 10.32 + 2.81 + 12.62 + 3.11
+sum = 124.65 ≈ 125
+
+Pixelul central devine mai apropiat de media vecinilor
+
+Pasul 2: Laplacian Filter (Detectare margini)
+Kernel Laplacian (fix, nu se calculeaza):
+[0   1   0]
+[1  -4   1]
+[0   1   0]
+Pseudocod Laplacian:
+Funcție ApplicaLaplacian(imagine):
+    
+    kernel = [[0, 1, 0],
+              [1, -4, 1],
+              [0, 1, 0]]
+    
+    Pentru fiecare pixel (x, y) din imagine (ignorand margini):
+        sum = 0
+        
+        // Aplica convolutie cu kernel
+        sum = imagine[x][y-1]×1 +
+              imagine[x-1][y]×1 +
+              imagine[x][y]×(-4) +
+              imagine[x+1][y]×1 +
+              imagine[x][y+1]×1
+        
+        // Asigura-te ca e in interval [0, 255]
+        rezultat[x][y] = clamp(sum, 0, 255)
+    
+    Returnez rezultat
+Exemplu Laplacian:
+Imagine netezita (dupa Gaussian):
+125  120  125
+120  150  120
+125  120  125
+
+Aplica Laplacian pe pixelul central [1][1]:
+sum = 120×1 + 120×1 + 150×(-4) + 120×1 + 120×1
+sum = 120 + 120 - 600 + 120 + 120
+sum = -120
+
+Valoare negativa -> se face pozitiva: abs(-120) = 120
+Aceasta e o MARGINE! (diferenta mare fata de vecini)
+
+Dar daca era uniform:
+Imagine uniforma:
+150  150  150
+150  150  150
+150  150  150
+
+sum = 150×1 + 150×1 + 150×(-4) + 150×1 + 150×1
+sum = 150 + 150 - 600 + 150 + 150
+sum = 0
+
+Fara margine! (cum e de asteptat)
+
+
+
+
+EXPLICAȚII SIMPLE - FĂRĂ PSEUDOCODURI
+
+1. LAPLACIANUL GAUSSIANULUI (LoG)
+Ce înțelegi prin "Laplacian al Gaussian"?
+Sunt două filtre puse unul după altul:
+
+Gaussian netezește imaginea (îndepărtează zgomotul)
+Laplacian detectează marginile (găsește schimbări bruste)
+
+De ce le pui pe amândouă?
+Dacă folosești doar Laplacian, contururile vor fi pline de zgomot pentru că Laplacian e foarte sensibil la orice schimbare mică.
+Dacă folosești doar Gaussian, imaginea devine prea estompată și pierzi contururile.
+LoG = cea mai bună combinație - contururi curate, fără zgomot.
+
+Cum funcționează Gaussian?
+Imaginează-ți o clopot Gaussian (curbă în formă de clopot):
+       •
+      • •
+     •   •
+    •     •
+   •       •
+  •         •
+Când aplici acest clopot pe fiecare pixel:
+
+Pixelul din centru primește cea mai mare greutate
+Pixelii apropiați primesc greutate medie
+Pixelii depărtați primesc puțină greutate
+
+Rezultat: Pixelul nou devine o medie ponderată a vecinilor săi. Zgomotul (pixelii ciudați) se estompează pentru că sunt "tăiați în medie".
+
+Ce e sigma?
+E un număr care spune cât de "larg" e clopotul:
+
+Sigma mic = clopot îngust = puțină netezire
+Sigma mare = clopot lat = multă netezire
+
+Pentru LoG se folosește sigma = 1.4 (standard).
+
+Cum funcționează Laplacian?
+Ideea simplă: Compari un pixel cu vecinii săi și vezi cât diferă.
+Kernelul Laplacian e:
+[0   1   0]
+[1  -4   1]
+[0   1   0]
+Ce înseamnă?
+
+Pixelul din centru se înmulțește cu -4 (se scade 4 ori)
+Vecinii sus, jos, stânga, dreapta se adună (+1 fiecare)
+
+Rezultat:
+
+Dacă pixelul central e mult mai deschis decât vecini → suma va fi MARE (margine!)
+Dacă pixelul central e la fel cu vecinii → suma va fi 0 (fără margine)
+
+
+Exemplu LoG complet
+Imagine originală (cu zgomot):
+Pixeli: 100, 120, 150, 130, 140
+Cu zgomot aleator peste tot
+După Gaussian:
+Pixeli devin: 110, 125, 140, 135, 145
+Zgomotul dispare, valorile se netezesc
+După Laplacian pe imaginea netezită:
+Vad că 140 e mult mai deschis decât 125 și 135
+Deci: MARGINE! Voi marca această zona
+
+
+2. COMPRESIA LZW (Lempel-Ziv-Welch)
+Ce e compresia?
+E ca și cum ai rescrie un text mai scurt prin înlocuirea secvențelor lungi cu coduri scurte.
+Exemplu din viață reală:
+
+Textul lung: "Dear Sir or Madam"
+Cod scurt: "DSM" (primele litere)
+Toată lumea înțelege ce înseamnă "DSM"
+
+
+Cum functionează LZW?
+Pasul 1: Incepi cu o masă de coduri standard
+Primele 256 coduri sunt pentru caractere singulare:
+
+0 = 'A'
+1 = 'B'
+2 = 'C'
+...
+255 = (ultimul caracter ASCII)
+
+Pasul 2: Citești text caracter cu caracter și construiești dicționarul pe parcurs
+Exemplu cu textul "ABCABC":
+Citesc 'A' și 'B'
+   -> 'AB' nu e în dicționar
+   -> Cod pentru 'A' = 0 (scriu 0)
+   -> Adaug 'AB' = codul 256
+   -> Caut 'B'
+
+Citesc 'B' și 'C'
+   -> 'BC' nu e în dicționar
+   -> Cod pentru 'B' = 1 (scriu 1)
+   -> Adaug 'BC' = codul 257
+   -> Caut 'C'
+
+Citesc 'C' și 'A'
+   -> 'CA' nu e în dicționar
+   -> Cod pentru 'C' = 2 (scriu 2)
+   -> Adaug 'CA' = codul 258
+   -> Caut 'A'
+
+Citesc 'A' și 'B'
+   -> 'AB' E ÎN DICȚIONAR! (am adaugat-o mai devreme)
+   -> Caut mai departe: 'ABC'
+
+Citesc 'A', 'B', 'C'
+   -> 'ABC' nu e în dicționar
+   -> Cod pentru 'AB' = 256 (scriu 256)
+   -> Adaug 'ABC' = codul 259
+
+Citesc 'C' (ultimul)
+   -> Cod pentru 'C' = 2 (scriu 2)
+
+OUTPUT: [0, 1, 2, 256, 2]
+Gata! Am comprimat textul.
+
+De ce e bun LZW?
+
+Nu trebuie să salvezi dicționarul (decompresorul îl reconstruiește singur)
+Funcționează bine pe texte cu pattern-uri repetitive
+E simplu de implementat
+
+
+Cum se decomprimează?
+Ideea: Decompresorul face exact același dicționar pe măsură ce citește codurile.
+Citesc codul 0
+   -> Dicționar[0] = 'A'
+   -> Scriu 'A'
+
+Citesc codul 1
+   -> Dicționar[1] = 'B'
+   -> Scriu 'B'
+   -> Adaug în dicționar: 'A' + 'B' = codul 256
+
+Citesc codul 2
+   -> Dicționar[2] = 'C'
+   -> Scriu 'C'
+   -> Adaug în dicționar: 'B' + 'C' = codul 257
+
+Citesc codul 256
+   -> Dicționar[256] = 'AB'
+   -> Scriu 'AB'
+   -> Adaug în dicționar: 'C' + 'A' = codul 258
+
+Citesc codul 2
+   -> Dicționar[2] = 'C'
+   -> Scriu 'C'
+   -> Adaug în dicționar: 'AB' + 'C' = codul 259
+
+OUTPUT: "ABCABC"
+Perfect! Am recuperat textul original.
+
+Caz special în decompresie
+Uneori apare o situație ciudată:
+Comprimat: [10, 256]
+
+Citesc 256 dar 256 NU E ÎNC ÎN DICȚIONAR!
+
+Soluție: Iau codul anterior (10), îl traduc, 
+și adaug primul lui caracter la sfârșit.
+E o situație rară dar posibilă și LZW o handleaza.
+
+
+3. HUFFMAN CODING (Codificare cu frecvență)
+Ce e Huffman?
+E o idee foarte simplă:
+Caracterele care apar rar primesc cod lung, caracterele care apar des primesc cod scurt.
+
+Exemplu
+Text: "AAABBC"
+Frecvența:
+
+'A' apare 3 ori
+'B' apare 2 ori
+'C' apare 1 dată
+
+Codificare Huffman:
+
+'A' = 0 (scurt pentru că e des)
+'B' = 10 (mediu)
+'C' = 11 (lung pentru că e rar)
+
+Rezultat:
+Original: A A A B B C = 6 caractere × 8 biți = 48 biți
+
+Huffman: 0 0 0 10 10 11 = 8 biți total!
+
+Compresie: 48 → 8 biți (83% mai mic!)
+
+De ce funcționează?
+Matematică simplă:
+
+'A' apare 3 ori → cod 1 bit → 3 × 1 = 3 biți
+'B' apare 2 ori → cod 2 biți → 2 × 2 = 4 biți
+'C' apare 1 dată → cod 2 biți → 1 × 2 = 2 biți
+Total: 3 + 4 + 2 = 9 biți (mai mic decât 48!)
+
+
+Cum se construiește arborele Huffman?
+Ideea: Combini caracterele cu cea mai mică frecvență.
+Exemplu cu "AAABBC":
+Pas 1: Ai 3 noduri
+   [A:3]  [B:2]  [C:1]
+
+Pas 2: Combina pe B și C (au cea mai mică frecvență)
+   [A:3]  [BC:3]
+           /  \
+         [B:2] [C:1]
+
+Pas 3: Combina pe A și BC
+   [ABC:6]
+    /    \
+  [A:3]  [BC:3]
+         /    \
+       [B:2]  [C:1]
+
+Acum citești arbore:
+   Stânga = 0, Dreapta = 1
+   
+   Pentru A: Du-te stânga → 0
+   Pentru B: Du-te dreapta, stânga → 10
+   Pentru C: Du-te dreapta, dreapta → 11
+
+Avantaje și dezavantaje Huffman
+Avantaje:
+
+Compression-ul e optim (nu poți face mai bine)
+Funcționează pe orice tip de date
+
+Dezavantaje:
+
+Trebuie să trimiți și tabelul de coduri (altfel decompresorul nu știe)
+E mai complex de implementat
+
+
+
+4. RLE/RLC (Run-Length Encoding)
+Ce e RLE?
+E cea mai simplă compresie din lume:
+Inlocuiești secvențe de caractere identice cu caracter + numărul de repetiții.
+
+Exemplu
+Original: "AAABBCCCCDD"
+
+RLE: A3 B2 C4 D2
+
+Sau mai explicit: [A, 3] [B, 2] [C, 4] [D, 2]
+Cum se înțelege?
+
+A3 = "A repetat de 3 ori" = "AAA"
+B2 = "B repetat de 2 ori" = "BB"
+C4 = "C repetat de 4 ori" = "CCCC"
+D2 = "D repetat de 2 ori" = "DD"
+
+
+Compresie vs Decompresie
+Compresie (original → compact):
+Citesc text și numărraportul consecutive:
+"AAABBCCCCDD"
+
+Văd 3 A-uri consecutive → scriu [A, 3]
+Văd 2 B-uri consecutive → scriu [B, 2]
+Văd 4 C-uri consecutive → scriu [C, 4]
+Văd 2 D-uri consecutive → scriu [D, 2]
+
+Output: [A, 3] [B, 2] [C, 4] [D, 2]
+Decompresie (compact → original):
+Citesc coduri și expandez:
+[A, 3] → "AAA"
+[B, 2] → "BB"
+[C, 4] → "CCCC"
+[D, 2] → "DD"
+
+Output: "AAABBCCCCDD"
+
+Când e bun RLE?
+Foarte bun pentru:
+
+Imagini cu zone uniforme (cer albastru, perete alb)
+Faxuri (mult alb și negru)
+Screenshot-uri (texte, forme simple)
+
+Prost pentru:
+
+Text obișnuit cu cuvinte diferite
+Imagini cu mult zgomot (fiecare pixel e diferit)
+
+
+Exemplu cu imagine
+Imagine simplă (alb = 255, negru = 0):
+255 255 255 0 0 255 255 255 255
+RLE:
+255, 3, 0, 2, 255, 4
+Citirea: "255 repetat 3 ori, apoi 0 repetat 2 ori, apoi 255 repetat 4 ori"
+
+
+COMPARAȚIE RAPIDĂ
+LZW
+
+Ideal pentru: Texte cu pattern-uri, GIF
+Cum: Dicționar dinamic care se construiește
+Avantaj: Nu trebuie tabel suplimentar
+Dezavantaj: Complex
+
+Huffman
+
+Ideal pentru: Orice date cu frecvență variabilă
+Cum: Coduri scurte pentru caractere frecvente
+Avantaj: Optimal matematic
+Dezavantaj: Trebuie tabel, complex
+
+RLE
+
+Ideal pentru: Imagini simple, zone uniforme
+Cum: Caracter + numărul repetiții
+Avantaj: Super simplu
+Dezavantaj: Prost pentru date diverse
+
+LoG
+
+NU e compresie! E un filtru
+Ideal pentru: Detectare contururi curate
+Cum: Gaussian + Laplacian
+Avantaj: Contururi fără zgomot
+Dezavantaj: Relativ complex
+
+
+EXEMPLE PRACTICE
+Când foloseşti LZW?
+Text: "the the the cat cat cat dog dog"
+
+LZW: codifică "the", "cat", "dog" cu coduri scurte
+Compresie: 30 caractere → poate 15 coduri
+
+Bun pentru: Fișiere text, GIF, documente
+Când foloseşti Huffman?
+Text: "AAAAAABBC"
+
+A apare 6 ori (60%) → cod scurt: "0"
+B apare 2 ori (20%) → cod mediu: "10"
+C apare 1 dată (10%) → cod lung: "11"
+
+Bun pentru: Compresie finală, orice date
+Când foloseşti RLE?
+Imagine: Cer albastru continuu + cladire neagra
+
+Cer: 1000 pixeli albastri consecutivi
+RLE: "albastru, 1000" (2 numere în loc de 1000!)
+
+Bun pentru: Screenshot-uri, imagini simple, faxuri
+Când foloseşti LoG?
+Fotografie: Contururi ascunse în zgomot
+
+LoG: Netezește zgomotul, apoi evidențiază contururile
+
+Bun pentru: Detectare obiecte, recunoaștere forme
+
+REZUMAT - CE TREBUIE SĂ REȚII
+AlgoritmFuncțieSimplitateCompresieLoGFiltrare contururiMediuN/A (nu e compresie)LZWCompresie textMediuBună (30-50%)HuffmanCompresie optimăGreuFoarte bună (20-40%)RLECompresie imaginiUșorExcelentă pentru zone uniforme
+
+
+
+
+

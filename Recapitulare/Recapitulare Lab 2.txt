@@ -1,0 +1,154 @@
+Laborator 2:
+
+RGB - model aditiv folosit pentru ecrane 
+
+se adauga doar lumina ( de la un ecran stins la un afisaj cu color )
+
+alb = (255,255,255)
+negru = (0,0,0)
+
+
+
+
+CMYK - Cyan , Magenta , Yellow , Black
+
+folosita pentru printare 
+
+fiecare pigment CMY blocheaza o singura componenta RGB ( Cyan absoarbe rosu si lasa doar verde si albastru )
+
+Verde este singura culoare care nu este absorbita de nimeni
+
+
+alb=(0,0,0) - lipsa culoare
+negru = (1,1,1) - cerneala maxima
+
+Algoritm Conversie_RGB_la_CMY(imagine)
+    Pentru i de la 0 pana la Inaltime - 1 executa
+        Pentru j de la 0 pana la Latime - 1 executa
+            
+            R <- citeste_canal_Rosu(imagine, i, j)
+            G <- citeste_canal_Verde(imagine, i, j)
+            B <- citeste_canal_Albastru(imagine, i, j)
+            
+            // Formulele din curs (obtinem valori intre 0 si 1)
+            C_subunitar <- 1 - (R / 255)
+            M_subunitar <- 1 - (G / 255)
+            Y_subunitar <- 1 - (B / 255)
+            
+            // Scalare la 0-255 pentru afisare pe ecran
+            Cyan <- C_subunitar * 255
+            Magenta <- M_subunitar * 255
+            Yellow <- Y_subunitar * 255
+            
+            scrie_pixel(imagine, i, j, Cyan, Magenta, Yellow)
+            
+        SfarsitPentru
+    SfarsitPentru
+SfarsitAlgoritm
+
+
+
+Algoritm Conversie_CMY_la_CMYK(C, M, Y)
+    // C, M, Y sunt valori intre 0 si 1 primite ca input pentru un pixel
+    
+    // Negrul (K) este cea mai mica valoare dintre cele trei componente
+    K <- Minim(C, M, Y)
+    
+    // Daca negrul este maxim (1), evitam impartirea la zero
+    Daca K == 1 atunci
+        Cyan_CMYK <- 0
+        Magenta_CMYK <- 0
+        Yellow_CMYK <- 0
+    Altfel
+        Cyan_CMYK    <- (C - K) / (1 - K)
+        Magenta_CMYK <- (M - K) / (1 - K)
+        Yellow_CMYK  <- (Y - K) / (1 - K)
+    SfarsitDaca
+    
+    Returneaza Cyan_CMYK, Magenta_CMYK, Yellow_CMYK, K
+SfarsitAlgoritm
+
+
+
+Metode de transformare in gray scale:
+
+1.Media
+
+R+G+B/3
+
+-
+
+Algoritm RGB_la_Gray_Media_Simpla(imagine)
+    Pentru i de la 0 pana la Inaltime - 1 executa
+        Pentru j de la 0 pana la Latime - 1 executa
+            
+            // Citire pixel curent
+            R <- citeste_canal_Rosu(imagine, i, j)
+            G <- citeste_canal_Verde(imagine, i, j)
+            B <- citeste_canal_Albastru(imagine, i, j)
+            
+            // Aplicare formula
+            Gri <- (R + G + B) / 3
+            
+            // Scrierea noii valori pe toate cele 3 canale pentru a obtine gri
+            scrie_pixel(imagine, i, j, Gri, Gri, Gri)
+            
+        SfarsitPentru
+    SfarsitPentru
+SfarsitAlgoritm
+
+
+2. Ponderi (coeficienti)
+
+Gray_2 = 0.299 * R + 0.587 * G + 0.114 * B
+
+- Ajusteaza pentu a fi mai placut ochiului uman
+- ochiul uman este mai sensibil la verde deci se aplica o pondere mai mare
+
+Algoritm RGB_la_Gray_Ponderat(imagine)
+    Pentru i de la 0 pana la Inaltime - 1 executa
+        Pentru j de la 0 pana la Latime - 1 executa
+            
+            R <- citeste_canal_Rosu(imagine, i, j)
+            G <- citeste_canal_Verde(imagine, i, j)
+            B <- citeste_canal_Albastru(imagine, i, j)
+            
+            // Aplicare ponderi conform sensibilitatii ochiului
+            Gri <- 0.299 * R + 0.587 * G + 0.114 * B
+            
+            scrie_pixel(imagine, i, j, Gri, Gri, Gri)
+            
+        SfarsitPentru
+    SfarsitPentru
+SfarsitAlgoritm
+
+
+
+3. Desaturare (media min+max)
+
+Gray_3= (min(R,G,B) + max(R,G,B))/2
+
+- ia doar valorile maxime si minime si ignora canalele de mijloc
+- se pierd detalii fine 
+
+
+Algoritm RGB_la_Gray_MinMax(imagine)
+    Pentru i de la 0 pana la Inaltime - 1 executa
+        Pentru j de la 0 pana la Latime - 1 executa
+            
+            R <- citeste_canal_Rosu(imagine, i, j)
+            G <- citeste_canal_Verde(imagine, i, j)
+            B <- citeste_canal_Albastru(imagine, i, j)
+            
+            // Gasirea valorilor extreme din pixelul curent
+            Val_Min <- Minim(R, G, B)
+            Val_Max <- Maxim(R, G, B)
+            
+            Gri <- (Val_Min + Val_Max) / 2
+            
+            scrie_pixel(imagine, i, j, Gri, Gri, Gri)
+            
+        SfarsitPentru
+    SfarsitPentru
+SfarsitAlgoritm
+
